@@ -336,35 +336,42 @@
         pose.onResults(onResults);
 
                 // 1. Додаємо facingMode: 'user' для фронтальної камери
+                // Блок ініціалізації з гарантованою перевіркою
         const camera = new Camera(videoElement, { 
-            onFrame: async () => { await pose.send({image: videoElement}); }, 
+            onFrame: async () => { 
+                if (videoElement.readyState === 4) { // Перевірка, чи відео дійсно йде
+                    await pose.send({image: videoElement}); 
+                }
+            }, 
             width: 1280, 
             height: 720,
-            facingMode: 'user' // <-- Тільки фронтальна (селфі) камера
+            facingMode: 'user' 
         });
 
-        document.getElementById('startBtn').onclick = () => {
-            document.getElementById('startBtn').classList.add('hidden');
+        startBtn.onclick = async () => {
+            startBtn.classList.add('hidden');
             dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
             
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioCtx.resume();
-            setUI("⏳", "Запуск камери...", "Надайте дозвіл у браузері", false);
             
-            // 2. Додаємо обробку помилок (catch), щоб знати, якщо Chrome заблокував камеру
-            camera.start().then(() => {
+            setUI("⏳", "Запуск камери...", "Перевірте запит дозволу", false);
+            
+            try {
+                await camera.start();
                 appState = 'ASK_HEIGHT';
                 setTimeout(() => {
-                    speakWait("Привіт! Який твій зріст у сантиметрах? Введіть на екрані або скажіть цифру після сигналу.", () => {
-                        playSound('beep'); setTimeout(listenForHeight, 300);
+                    speakWait("Привіт! Який твій зріст у сантиметрах? Скажи цифру або введи на екрані.", () => {
+                        playSound('beep'); 
+                        setTimeout(listenForHeight, 500);
                     });
                 }, 1000);
-            }).catch((err) => {
-                console.error("Помилка камери: ", err);
-                setUI("❌", "Камера заблокована", "Відкрийте сайт через HTTPS", false);
-                speakLive("Не вдалося підключити камеру. Перевірте дозволи браузера.");
-            });
+            } catch (err) {
+                console.error(err);
+                setUI("❌", "Помилка камери", "Натисніть на замок у адресному рядку і дозвольте камеру", false);
+            }
         };
+
 document.getElementById('startBtn').classList.add('hidden');
             dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
             
