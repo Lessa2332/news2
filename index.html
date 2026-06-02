@@ -11,19 +11,22 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
         .glass-panel { background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        /* Пульсація для мікрофона */
         @keyframes pulse-mic {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
             100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
         .listening { animation: pulse-mic 1.5s infinite; border-color: #10b981; }
+        .victory-flash { animation: flash-green 1s ease-out forwards; }
+        @keyframes flash-green { 0% { background-color: rgba(16, 185, 129, 0.8); } 100% { background-color: rgba(16, 185, 129, 0); } }
     </style>
 </head>
-<body class="text-slate-50 antialiased select-none font-sans">
+<body class="text-slate-50 antialiased select-none font-sans relative">
 
     <video id="webcam" class="absolute inset-0 w-full h-full object-cover hidden" autoplay playsinline muted></video>
     <canvas id="output_canvas" class="absolute inset-0 w-full h-full object-cover scale-x-[-1] z-0"></canvas>
+    
+    <div id="victoryOverlay" class="absolute inset-0 z-20 pointer-events-none hidden"></div>
 
     <div class="absolute inset-0 z-10 flex flex-col justify-between pointer-events-none p-4 pb-8 md:p-8">
         
@@ -52,17 +55,24 @@
             </button>
 
             <div id="dialogBox" class="glass-panel max-w-2xl w-full p-6 md:p-8 rounded-3xl border border-slate-600/50 text-center shadow-2xl transition-all duration-500 opacity-0 scale-95 hidden">
-                
-                <div id="statusIcon" class="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center text-2xl mb-4 border-2 border-slate-600 transition-colors">
-                    🤖
-                </div>
-                
+                <div id="statusIcon" class="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center text-2xl mb-4 border-2 border-slate-600 transition-colors">🤖</div>
                 <h2 id="aiSubtitle" class="text-2xl md:text-3xl font-bold leading-tight mb-2">Підготовка до запуску...</h2>
                 <p id="aiSubtext" class="text-sm text-slate-300">Зачекайте на завантаження нейромережі</p>
                 
-                <div id="fallbackInputGroup" class="mt-6 hidden flex gap-2 justify-center">
-                    <input type="number" id="manualHeight" placeholder="Наприклад: 168" class="bg-slate-950/80 border border-slate-600 text-white rounded-xl px-4 py-3 w-32 text-center text-lg focus:outline-none focus:border-emerald-500">
-                    <button id="confirmHeightBtn" class="bg-emerald-600 px-6 py-3 rounded-xl font-bold active:scale-95 transition-transform">OK</button>
+                <div id="heightInputGroup" class="mt-6 flex gap-2 justify-center hidden opacity-0 transition-opacity duration-500">
+                    <input type="number" id="manualHeight" placeholder="Або введіть: 168" class="bg-slate-950/80 border border-slate-600 text-white rounded-xl px-4 py-3 w-40 text-center text-sm focus:outline-none focus:border-emerald-500 shadow-inner">
+                    <button id="confirmHeightBtn" class="bg-emerald-600 hover:bg-emerald-500 text-slate-50 px-6 py-3 rounded-xl font-bold active:scale-95 transition-all shadow-lg cursor-pointer">OK</button>
+                </div>
+            </div>
+
+            <div id="reportBox" class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl border border-emerald-500/50 text-center shadow-2xl hidden">
+                <h2 class="text-2xl font-black text-emerald-400 mb-4">🏁 Тренування завершено!</h2>
+                <div class="flex justify-around mb-6 text-center">
+                    <div><p class="text-[10px] text-slate-400 uppercase">Рухів</p><p id="repCount" class="text-3xl font-bold">0</p></div>
+                    <div><p class="text-[10px] text-slate-400 uppercase">Макс. Висота</p><p id="repMaxHeight" class="text-3xl font-bold text-emerald-400">0</p></div>
+                </div>
+                <div id="gestureInstruction" class="bg-slate-800/80 p-4 rounded-xl border border-slate-600 animate-pulse">
+                    <p class="text-sm font-bold text-slate-200">🙌 Підніми дві руки вгору, щоб зберегти результат у базу!</p>
                 </div>
             </div>
 
@@ -78,94 +88,55 @@
                     </div>
                 </div>
             </div>
-
         </main>
     </div>
 
-    <div id="reportModal" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col items-center justify-center p-4">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 relative">
-            <h2 class="text-2xl font-black text-emerald-400 mb-2">🏁 Тренування завершено!</h2>
-            <div class="space-y-3 mb-6 mt-4">
-                <div class="bg-slate-800 p-3 rounded-xl flex justify-between">
-                    <span class="text-slate-400">Час підходу:</span>
-                    <span class="font-bold">30 секунд</span>
-                </div>
-                <div class="bg-slate-800 p-3 rounded-xl flex justify-between">
-                    <span class="text-slate-400">Всього рухів:</span>
-                    <span id="repCount" class="font-bold">0</span>
-                </div>
-                <div class="bg-slate-800 p-3 rounded-xl flex justify-between">
-                    <span class="text-slate-400">Макс. висота стегна:</span>
-                    <span id="repMaxHeight" class="font-bold text-emerald-400">0 см</span>
-                </div>
-            </div>
-            <textarea id="aiPromptOutput" class="w-full h-32 bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-400 mb-4" readonly></textarea>
-            <button id="copyReportBtn" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-bold transition-colors">📋 Скопіювати звіт для ШІ</button>
-            <button onclick="location.reload()" class="w-full mt-2 bg-slate-800 hover:bg-slate-700 py-3 rounded-xl font-bold transition-colors text-sm">🔄 Почати заново</button>
-        </div>
-    </div>
-
     <script>
-        // DOM Елементи
+        // ВСТАВТЕ ВАШ URL З GOOGLE APPS SCRIPT ТУДИ:
+        const GOOGLE_SHEETS_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE";
+
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const dialogBox = document.getElementById('dialogBox');
-        const aiSubtitle = document.getElementById('aiSubtitle');
-        const aiSubtext = document.getElementById('aiSubtext');
-        const statusIcon = document.getElementById('statusIcon');
-        const startBtn = document.getElementById('startBtn');
-        const phaseIndicator = document.getElementById('phaseIndicator');
-        const liveStatsBox = document.getElementById('liveStatsBox');
         
-        // Системні змінні
-        let appState = 'INIT'; // INIT, ASK_HEIGHT, LISTEN, CALIBRATE, EXPLAIN, EXERCISE, DONE
+        let appState = 'INIT'; // INIT, ASK_HEIGHT, CALIBRATE, EXPLAIN, EXERCISE, DONE, SAVED
         let userHeightCm = null;
         let kFactor = null;
         let audioCtx = null;
         let lastSpokenTime = 0;
         let exerciseTimer = 0;
+        let speechRecognizer = null;
         
-        // Метрики тренування
-        let metrics = {
-            reps: 0,
-            maxKneeHeight: 0,
-            errors: 0,
-            isKneeUp: false // прапорець для підрахунку повторень
-        };
+        let metrics = { reps: 0, maxKneeHeight: 0, errors: 0, isKneeUp: false };
 
-        // 1. Генератор звуків (Beep) замість файлів
-        function playBeep(type = 'short') {
+        // Звуки
+        function playSound(type) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             
-            if (type === 'short') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.2);
-            } else if (type === 'start') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.4);
-                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.5);
+            const now = audioCtx.currentTime;
+            if (type === 'beep') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
+                gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'victory') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.setValueAtTime(600, now + 0.2);
+                osc.frequency.setValueAtTime(800, now + 0.4);
+                gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+                osc.start(now); osc.stop(now + 0.8);
             }
         }
 
-        // 2. Розумна функція озвучення з колбеком по завершенню
         function speakWait(text, callback) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'uk-UA';
-            utterance.rate = 1.05;
+            utterance.lang = 'uk-UA'; utterance.rate = 1.05;
             utterance.onend = () => { if(callback) callback(); };
             window.speechSynthesis.speak(utterance);
         }
@@ -174,268 +145,214 @@
             const now = Date.now();
             if (now - lastSpokenTime > 2500) {
                 window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'uk-UA';
-                utterance.rate = 1.1;
-                window.speechSynthesis.speak(utterance);
-                lastSpokenTime = now;
+                const u = new SpeechSynthesisUtterance(text); u.lang = 'uk-UA'; u.rate = 1.1;
+                window.speechSynthesis.speak(u); lastSpokenTime = now;
             }
         }
 
-        // 3. Зміна стану UI
         function setUI(icon, title, subtitle, isListening = false) {
-            statusIcon.innerText = icon;
-            aiSubtitle.innerText = title;
-            aiSubtext.innerText = subtitle;
-            if (isListening) {
-                statusIcon.classList.add('listening');
-            } else {
-                statusIcon.classList.remove('listening');
-            }
+            document.getElementById('statusIcon').innerText = icon;
+            document.getElementById('aiSubtitle').innerText = title;
+            document.getElementById('aiSubtext').innerText = subtitle;
+            isListening ? document.getElementById('statusIcon').classList.add('listening') : document.getElementById('statusIcon').classList.remove('listening');
         }
 
-        // 4. Логіка розпізнавання голосу (STT)
+        // --- ГІБРИДНИЙ ВВІД ЗРОСТУ ---
         function listenForHeight() {
-            setUI("🎤", "Слухаю...", "Скажіть свій зріст (наприклад: сто шістдесят вісім)", true);
+            setUI("🎤", "Слухаю...", "Скажіть зріст або введіть на екрані", true);
             
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                // Фоллбек, якщо браузер (наприклад iPhone Safari без налаштувань) не підтримує STT
-                showManualHeightInput();
-                return;
-            }
+            const inputGroup = document.getElementById('heightInputGroup');
+            inputGroup.classList.remove('hidden');
+            setTimeout(() => inputGroup.classList.remove('opacity-0'), 50);
 
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'uk-UA';
-            recognition.continuous = false;
-            recognition.interimResults = false;
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) return;
 
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                // Витягуємо всі цифри зі сказаного
-                const numbers = transcript.match(/\d+/g); 
+            speechRecognizer = new SR();
+            speechRecognizer.lang = 'uk-UA';
+            speechRecognizer.continuous = false;
+
+            speechRecognizer.onresult = (event) => {
+                const numbers = event.results[0][0].transcript.match(/\d+/g); 
                 let height = numbers ? parseInt(numbers.join('')) : 0;
-                
-                // Якщо ШІ почув "1 метр 68", то numbers буде [1, 68] -> join = "168"
-                if (height > 100 && height < 230) {
-                    userHeightCm = height;
-                    document.getElementById('uiHeight').innerText = `${height} см`;
-                    processToCalibration();
-                } else {
-                    speakWait("Не розпізнала цифру. Введіть зріст вручну на екрані.", showManualHeightInput);
-                }
+                if (height > 100 && height < 230) acceptHeight(height);
+                else setUI("⌨️", "Не розпізнано", "Введіть цифру на екрані", false);
             };
-
-            recognition.onerror = () => {
-                showManualHeightInput();
-            };
-
-            recognition.start();
+            speechRecognizer.start();
         }
 
-        function showManualHeightInput() {
-            setUI("⌨️", "Введіть зріст", "Голосовий ввід недоступний", false);
-            document.getElementById('fallbackInputGroup').classList.remove('hidden');
+        function acceptHeight(val) {
+            if (speechRecognizer) { speechRecognizer.stop(); speechRecognizer = null; }
+            userHeightCm = val;
+            document.getElementById('uiHeight').innerText = `${val} см`;
+            document.getElementById('heightInputGroup').classList.add('hidden');
+            
+            appState = 'CALIBRATE';
+            document.getElementById('phaseIndicator').innerText = "Етап: Просторове сканування";
+            setUI("🚶", "Відійдіть від екрана", "Станьте в повний зріст боком до камери", false);
+            speakWait(`Прийнято. Ваш зріст ${userHeightCm} сантиметрів. Відійдіть від екрана, щоб я побачила вас повністю.`);
+            document.getElementById('miniMetrics').classList.remove('hidden');
         }
 
         document.getElementById('confirmHeightBtn').onclick = () => {
             const val = parseInt(document.getElementById('manualHeight').value);
-            if (val > 100 && val < 230) {
-                userHeightCm = val;
-                document.getElementById('uiHeight').innerText = `${val} см`;
-                document.getElementById('fallbackInputGroup').classList.add('hidden');
-                processToCalibration();
+            if (val > 100 && val < 230) acceptHeight(val);
+            else {
+                document.getElementById('manualHeight').classList.add('border-red-500');
+                setTimeout(() => document.getElementById('manualHeight').classList.remove('border-red-500'), 1000);
             }
         };
 
-        // 5. Переходи між станами (State Machine)
-        function processToCalibration() {
-            appState = 'CALIBRATE';
-            phaseIndicator.innerText = "Етап: Просторове сканування";
-            setUI("🚶", "Відійдіть від екрана", "Станьте в повний зріст боком до камери", false);
-            speakWait(`Відмінно, зріст ${userHeightCm} сантиметрів. Тепер відійдіть на два метри і станьте в повний зріст. Я чекаю.`);
-            document.getElementById('miniMetrics').classList.remove('hidden');
-        }
-
+        // --- ЛОГІКА ТРЕНУВАННЯ ---
         function processToExplanation() {
             appState = 'EXPLAIN';
-            phaseIndicator.innerText = "Етап: Інструктаж";
-            setUI("🏃‍♀️", "Вправа: Винос стегна", "Слухайте інструкцію", false);
-            speakWait("Я тебе бачу! Простір відкалібровано. Вправа: Високе піднімання стегна на місці. Тримай спину рівно. Час роботи 30 секунд. Починай після свистка.", () => {
+            document.getElementById('phaseIndicator').innerText = "Етап: Інструктаж";
+            setUI("🏃‍♀️", "Готово!", "Приготуйтесь до роботи", false);
+            speakWait("Простір відкалібровано. Вправа: Високе піднімання стегна. 30 секунд. Починай після сигналу.", () => {
                 setTimeout(startExercise, 1000);
             });
         }
 
         function startExercise() {
             appState = 'EXERCISE';
-            phaseIndicator.innerText = "Етап: Робота";
-            playBeep('start');
-            dialogBox.classList.add('hidden'); // Ховаємо діалог
-            liveStatsBox.classList.remove('hidden'); // Показуємо живі цифри
+            document.getElementById('phaseIndicator').innerText = "Етап: Робота";
+            playSound('beep');
+            dialogBox.classList.add('hidden');
+            document.getElementById('liveStatsBox').classList.remove('hidden');
             
-            // Таймер на 30 секунд
-            exerciseTimer = 30;
+            exerciseTimer = 30; // 30 секунд на вправу
             const timerInterval = setInterval(() => {
                 exerciseTimer--;
                 document.getElementById('uiTimer').innerText = `00:${exerciseTimer < 10 ? '0'+exerciseTimer : exerciseTimer}`;
-                
-                if (exerciseTimer <= 0) {
-                    clearInterval(timerInterval);
-                    finishExercise();
-                }
+                if (exerciseTimer <= 0) { clearInterval(timerInterval); finishExercise(); }
             }, 1000);
         }
 
         function finishExercise() {
             appState = 'DONE';
-            playBeep('start');
-            liveStatsBox.classList.add('hidden');
-            speakWait("Тренування завершено! Формую звіт.");
+            playSound('beep');
+            document.getElementById('liveStatsBox').classList.add('hidden');
+            document.getElementById('reportBox').classList.remove('hidden');
             
-            // Заповнення модального вікна
             document.getElementById('repCount').innerText = metrics.reps;
             document.getElementById('repMaxHeight').innerText = metrics.maxKneeHeight + " см";
             
-            const prompt = `Проаналізуй виконання вправи "Високе піднімання стегна":
-- Зріст: ${userHeightCm} см
-- Час: 30 сек
-- Кількість рухів (повторень): ${metrics.reps}
-- Максимальна висота коліна: ${metrics.maxKneeHeight} см
-- Кількість помилок (низьке коліно): ${metrics.errors}
-Напиши короткий мотивуючий відгук для 13-річної атлетки.`;
-            
-            document.getElementById('aiPromptOutput').value = prompt;
-            document.getElementById('reportModal').classList.remove('hidden');
-            document.getElementById('reportModal').classList.add('flex');
+            speakWait("Час вийшов! Підніми дві руки вгору, щоб зберегти результат у хмару.");
         }
 
-        // 6. Обробка відео MediaPipe
+        // --- ВІДПРАВКА ДАНИХ (WEBHOOK) ---
+        function saveToCloud() {
+            if (GOOGLE_SHEETS_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
+                console.warn("Вставте URL вашого скрипта в код!");
+                return;
+            }
+
+            const payload = {
+                height: userHeightCm,
+                time: 30,
+                reps: metrics.reps,
+                maxKnee: metrics.maxKneeHeight,
+                errors: metrics.errors
+            };
+
+            // Використовуємо mode: 'no-cors' щоб уникнути блокування браузером
+            fetch(GOOGLE_SHEETS_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                console.log("Дані успішно відправлені у фоні");
+            }).catch(err => console.error(err));
+        }
+
+        // --- АНАЛІЗ КАДРІВ ---
         function onResults(results) {
-            canvasElement.width = videoElement.videoWidth || 640;
-            canvasElement.height = videoElement.videoHeight || 480;
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // Темнення фону для фокусу
-            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasElement.width = videoElement.videoWidth || 640; canvasElement.height = videoElement.videoHeight || 480;
+            canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)'; canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
             if (results.poseLandmarks) {
                 const nose = results.poseLandmarks[0];
-                const hip = results.poseLandmarks[23]; // Ліве стегно
-                const knee = results.poseLandmarks[25]; // Ліве коліно
-                const heel = results.poseLandmarks[29]; // Ліва п'ята
+                const hip = results.poseLandmarks[23]; 
+                const knee = results.poseLandmarks[25]; 
+                const heel = results.poseLandmarks[29];
+                const leftWrist = results.poseLandmarks[15];
+                const rightWrist = results.poseLandmarks[16];
 
-                // Малюємо скелет
-                [nose, hip, knee, heel].forEach(pt => {
+                [nose, hip, knee, heel, leftWrist, rightWrist].forEach(pt => {
                     if(pt) {
-                        canvasCtx.beginPath();
-                        canvasCtx.arc(pt.x * canvasElement.width, pt.y * canvasElement.height, 6, 0, 2 * Math.PI);
-                        canvasCtx.fillStyle = '#10b981';
-                        canvasCtx.fill();
+                        canvasCtx.beginPath(); canvasCtx.arc(pt.x * canvasElement.width, pt.y * canvasElement.height, 6, 0, 2 * Math.PI);
+                        canvasCtx.fillStyle = '#10b981'; canvasCtx.fill();
                     }
                 });
-                
-                if (knee && hip) {
-                    canvasCtx.beginPath();
-                    canvasCtx.moveTo(hip.x * canvasElement.width, hip.y * canvasElement.height);
-                    canvasCtx.lineTo(knee.x * canvasElement.width, knee.y * canvasElement.height);
-                    canvasCtx.strokeStyle = '#10b981';
-                    canvasCtx.lineWidth = 4;
-                    canvasCtx.stroke();
+
+                if (appState === 'CALIBRATE' && nose && heel && nose.y > 0.05 && heel.y < 0.95) {
+                    const pixelHeight = Math.abs(heel.y - nose.y) * canvasElement.height;
+                    kFactor = userHeightCm / pixelHeight;
+                    processToExplanation();
                 }
 
-                // ЛОГІКА КАЛІБРУВАННЯ
-                if (appState === 'CALIBRATE' && nose && heel) {
-                    // Якщо людина в кадрі повністю
-                    if (nose.y > 0.05 && heel.y < 0.95) {
-                        const pixelHeight = Math.abs(heel.y - nose.y) * canvasElement.height;
-                        kFactor = userHeightCm / pixelHeight;
-                        processToExplanation();
-                    }
-                }
-
-                // ЛОГІКА ТРЕНУВАННЯ
                 if (appState === 'EXERCISE' && kFactor && knee && heel) {
-                    const kneeHeightPx = Math.abs(heel.y - knee.y) * canvasElement.height;
-                    const kneeHeightCm = Math.round(kneeHeightPx * kFactor);
-                    
+                    const kneeHeightCm = Math.round(Math.abs(heel.y - knee.y) * canvasElement.height * kFactor);
                     document.getElementById('liveKnee').innerHTML = `${kneeHeightCm}<span class="text-lg text-slate-400">см</span>`;
-                    
                     if (kneeHeightCm > metrics.maxKneeHeight) metrics.maxKneeHeight = kneeHeightCm;
 
-                    // Логіка підрахунку повторень (Тригер підйому і опускання)
-                    const targetHeight = userHeightCm * 0.54; // ~90 см для 168 см
-                    document.getElementById('liveTarget').innerText = `> ${Math.round(targetHeight)} см`;
-
-                    if (kneeHeightCm > targetHeight - 15) { // Якщо коліно пішло вгору
+                    const targetHeight = userHeightCm * 0.54; 
+                    if (kneeHeightCm > targetHeight - 15) { 
                         if (!metrics.isKneeUp) {
-                            metrics.isKneeUp = true;
-                            metrics.reps++;
-                            
-                            // Аналіз якості підйому
-                            if (kneeHeightCm >= targetHeight) {
-                                document.getElementById('liveStatsBox').style.borderColor = '#10b981';
-                            } else {
-                                document.getElementById('liveStatsBox').style.borderColor = '#ef4444';
-                                metrics.errors++;
-                                speakLive("Вище стегно!");
-                            }
+                            metrics.isKneeUp = true; metrics.reps++;
+                            if (kneeHeightCm < targetHeight) { metrics.errors++; speakLive("Вище стегно!"); }
                         }
-                    } else if (kneeHeightCm < 40) {
-                        // Коліно опустилося
-                        metrics.isKneeUp = false;
-                        document.getElementById('liveStatsBox').style.borderColor = 'rgba(71, 85, 105, 0.5)';
+                    } else if (kneeHeightCm < 40) { metrics.isKneeUp = false; }
+                }
+
+                // РОЗПІЗНАВАННЯ ЖЕСТУ ПЕРЕМОГИ
+                if (appState === 'DONE' && leftWrist && rightWrist && nose) {
+                    // Якщо обидва зап'ястя вище носа (координата Y менша, бо 0 - це верх екрану)
+                    if (leftWrist.y < nose.y && rightWrist.y < nose.y) {
+                        appState = 'SAVED'; // Блокуємо повторні спрацювання
+                        playSound('victory');
+                        
+                        // Анімація успіху
+                        const overlay = document.getElementById('victoryOverlay');
+                        overlay.classList.remove('hidden');
+                        overlay.classList.add('victory-flash');
+                        
+                        const instr = document.getElementById('gestureInstruction');
+                        instr.className = "bg-green-600 p-4 rounded-xl border border-green-500";
+                        instr.innerHTML = '<p class="text-sm font-bold text-white">✅ Дані збережено в Google Таблицю!</p>';
+                        
+                        speakWait("Відмінна робота! Результат збережено. Відпочивай.");
+                        saveToCloud(); // Відправка Webhook
                     }
                 }
             }
             canvasCtx.restore();
         }
 
-        // 7. Ініціалізація
-        const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+        const pose = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
         pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
         pose.onResults(onResults);
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => { await pose.send({image: videoElement}); },
-            width: 1280, height: 720
-        });
+        const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 1280, height: 720 });
 
-        // Старт програми (Запуск по кліку для розблокування Аудіо і Камери)
-        startBtn.onclick = () => {
-            startBtn.classList.add('hidden');
-            dialogBox.classList.remove('hidden');
-            dialogBox.classList.remove('opacity-0', 'scale-95');
+        document.getElementById('startBtn').onclick = () => {
+            document.getElementById('startBtn').classList.add('hidden');
+            dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
             
-            // Ініціалізація звукового контексту
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioCtx.resume();
-            
-            setUI("⏳", "Запуск камери...", "Надайте дозвіл у браузері", false);
+            setUI("⏳", "Запуск камери...", "Надайте дозвіл", false);
             
             camera.start().then(() => {
                 appState = 'ASK_HEIGHT';
-                phaseIndicator.innerText = "Етап: Голосове введення";
-                setUI("🎙", "Привіт!", "Зараз я запитаю твій зріст", false);
-                
-                // Чекаємо секунду, щоб користувач адаптувався, і говоримо
                 setTimeout(() => {
-                    speakWait("Привіт! Я твій смарт-тренер. Який твій зріст у сантиметрах? Скажи цифру після сигналу.", () => {
-                        playBeep('short');
-                        setTimeout(listenForHeight, 300);
+                    speakWait("Привіт! Який твій зріст у сантиметрах? Введіть на екрані або скажіть цифру після сигналу.", () => {
+                        playSound('beep'); setTimeout(listenForHeight, 300);
                     });
                 }, 1000);
             });
-        };
-
-        // Копіювання звіту
-        document.getElementById('copyReportBtn').onclick = () => {
-            const promptArea = document.getElementById('aiPromptOutput');
-            promptArea.select();
-            document.execCommand('copy');
-            document.getElementById('copyReportBtn').innerText = "✅ Скопійовано!";
-            document.getElementById('copyReportBtn').classList.replace('bg-blue-600', 'bg-green-600');
         };
     </script>
 </body>
