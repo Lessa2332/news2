@@ -5,55 +5,126 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Кібер-Лисиця 2026</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; -webkit-tap-highlight-color: transparent; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; }
-        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
-
-        /* ВІДСТУПИ ДЛЯ КНОПОК: піднімаємо їх вище системної панелі */
-        .controls { 
-            position: absolute; 
-            bottom: 40px; /* Додатковий відступ для Samsung */
-            z-index: 10;
+        * { 
+            box-sizing: border-box; margin: 0; padding: 0; 
+            user-select: none; -webkit-user-select: none; 
+            touch-action: none; /* Забороняє браузеру гортати сторінку */
+            -webkit-tap-highlight-color: transparent; 
         }
-        #controls-left { left: 20px; }
-        #controls-right { right: 20px; display: flex; gap: 10px; }
+
+        html, body { 
+            width: 100%; height: 100%; 
+            overflow: hidden; background: #000; 
+            color: #fff; font-family: 'Courier New', monospace;
+        }
+
+        #game-container { 
+            position: fixed; /* Фіксуємо контейнер */
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            /* Відступ знизу, щоб Android-панель не перекривала кнопки */
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        canvas { 
+            width: 100%; height: 100%; 
+            object-fit: contain; 
+            image-rendering: pixelated; 
+        }
+
+        /* КНОПКИ: Z-index найвищий */
+        .controls-layer {
+            position: absolute;
+            bottom: 80px; /* ПІДНЯВ КНОПКИ ВИЩЕ */
+            left: 0; right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 30px;
+            z-index: 9999;
+            pointer-events: none; /* Щоб не перекривало канвас */
+        }
 
         .touch-btn {
-            width: 55px; height: 55px; background: rgba(50, 50, 80, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 12px;
+            pointer-events: auto; /* АЛЕ КНОПКИ МАЮТЬ РЕАГУВАТИ */
+            width: 70px; height: 70px; 
+            background: rgba(255, 255, 255, 0.15);
+            border: 3px solid #fff; 
+            border-radius: 15px;
             color: #fff; font-size: 1.2rem; font-weight: bold;
             display: flex; align-items: center; justify-content: center;
         }
-        #btn-fire { width: 70px; height: 70px; border-radius: 50%; border-color: #ff003c; color: #ff003c; }
-        #btn-jump { width: 65px; border-color: #00f3ff; color: #00f3ff; }
 
-        .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
-        .btn-action-panel { background: #39ff14; color: #000; padding: 15px 30px; font-weight: bold; border-radius: 8px; border: none; font-size: 1.2rem; }
+        #btn-fire { background: rgba(255, 0, 60, 0.3); border-color: #ff003c; }
+        #btn-jump { background: rgba(0, 243, 255, 0.3); border-color: #00f3ff; }
+
+        .overlay-screen { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 10000; 
+        }
+
+        .btn-action { 
+            background: #39ff14; color: #000; padding: 20px 40px; 
+            font-size: 1.5rem; font-weight: bold; border-radius: 10px; border: none;
+            box-shadow: 0 0 20px #39ff14; cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="start-screen" class="overlay-screen">
-            <h1>Кібер-Лисиця</h1>
-            <button class="btn-action-panel" onclick="startGame()">ГРАТИ</button>
+            <h1>КІБЕР-ЛИСИЦЯ 2026</h1>
+            <p style="margin-bottom: 20px;">Натисни, щоб почати</p>
+            <button class="btn-action" onclick="startGame()">ПОЇХАЛИ</button>
         </div>
+
         <canvas id="gameCanvas" width="800" height="450"></canvas>
-        <div id="controls-left" class="controls">
-            <div class="touch-btn" id="btn-fire">FIRE</div>
-        </div>
-        <div id="controls-right" class="controls">
-            <div class="touch-btn" id="btn-left">←</div>
-            <div class="touch-btn" id="btn-right">→</div>
-            <div class="touch-btn" id="btn-jump">JUMP</div>
+
+        <div class="controls-layer">
+            <div id="btn-fire" class="touch-btn">FIRE</div>
+            <div style="display:flex; gap: 10px;">
+                <div id="btn-left" class="touch-btn">←</div>
+                <div id="btn-right" class="touch-btn">→</div>
+                <div id="btn-jump" class="touch-btn">↑</div>
+            </div>
         </div>
     </div>
+
     <script>
-        // ... тут ваш попередній код скрипта ...
-        // Головне: переконайтеся, що ви скопіювали всю функціональність
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameActive = false;
+        const keys = { Left: false, Right: false, Jump: false, Fire: false };
+
         function startGame() {
             document.getElementById('start-screen').style.display = 'none';
-            // ... запуск гри ...
+            gameActive = true;
+            loop();
+        }
+
+        // Обробка тач-подій з прив'язкою до ID
+        function setupButton(id, key) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+        }
+
+        setupButton('btn-left', 'Left');
+        setupButton('btn-right', 'Right');
+        setupButton('btn-jump', 'Jump');
+        setupButton('btn-fire', 'Fire');
+
+        function loop() {
+            if(!gameActive) return;
+            // Логіка гри...
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0, canvas.width, canvas.height);
+            ctx.fillStyle = '#39ff14'; ctx.fillText("ГРА ПРАЦЮЄ", 350, 200);
+            
+            // Якщо натиснуто кнопку:
+            if(keys.Fire) ctx.fillStyle = 'red'; else ctx.fillStyle = '#39ff14';
+            ctx.fillRect(50, 50, 50, 50); // Візуальний тест кнопки
+
+            requestAnimationFrame(loop);
         }
     </script>
 </body>
