@@ -8,199 +8,80 @@
         :root {
             --neon-green: #39ff14;
             --neon-blue: #00f3ff;
-            --neon-pink: #ff007f;
+            --neon-red: #ff003c;
             --dark-bg: #060608;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
         html, body {
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--dark-bg);
-            color: #fff;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: none; /* Захист від скролу та зуму на iOS/Android */
+            position: fixed; width: 100%; height: 100%; overflow: hidden;
+            background-color: var(--dark-bg); color: #fff; font-family: 'Courier New', Courier, monospace;
+            display: flex; align-items: center; justify-content: center; touch-action: none;
         }
 
-        /* Головний контейнер гри */
         #game-container {
-            position: relative;
-            width: 95vw;
-            height: 53.43vw; /* Співвідношення 16:9 */
-            max-width: 800px;
-            max-height: 450px;
-            background: #0f0f14;
-            border: 3px solid #222;
-            box-shadow: 0 0 30px rgba(0,0,0,0.9);
-            overflow: hidden;
+            position: relative; width: 95vw; height: 53.43vw; max-width: 800px; max-height: 450px;
+            background: #0f0f14; border: 3px solid #222; box-shadow: 0 0 30px rgba(0,0,0,0.9); overflow: hidden;
         }
 
-        canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-            image-rendering: pixelated;
-        }
+        canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
 
-        /* Стартовий та Фінальний екрани */
         .overlay-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, #101815 0%, #060608 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            padding: 20px;
-            text-align: center;
-            border: 4px solid var(--neon-green);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; padding: 20px; text-align: center; border: 4px solid var(--neon-green);
         }
 
-        h1 {
-            font-size: 2.2rem;
-            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .subtitle {
-            font-size: 1.4rem;
-            color: var(--neon-green);
-            text-shadow: 0 0 8px var(--neon-green);
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-
-        .description {
-            max-width: 500px;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin-bottom: 25px;
-            color: #aaa;
-        }
-
+        h1 { font-size: 2.2rem; text-shadow: 0 0 10px var(--neon-blue); margin-bottom: 5px; text-transform: uppercase; }
+        .subtitle { font-size: 1.4rem; color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green); margin-bottom: 20px; font-weight: bold; }
+        .description { max-width: 500px; font-size: 0.9rem; line-height: 1.4; margin-bottom: 25px; color: #aaa; }
+        
         .btn-action-panel {
-            background-color: var(--neon-green);
-            color: #000;
-            border: none;
-            padding: 12px 35px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 6px;
-            box-shadow: 0 0 15px var(--neon-green);
+            background-color: var(--neon-green); color: #000; border: none; padding: 15px 40px;
+            font-size: 1.2rem; font-weight: bold; cursor: pointer; border-radius: 6px; box-shadow: 0 0 15px var(--neon-green);
         }
 
-        /* Мобільний тач-контролер */
-        #controls {
-            position: absolute;
-            bottom: 10px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
-            pointer-events: none; /* Пропускає кліки по канвасу, якщо треба */
-        }
+        /* Мобільне керування (FIRE зліва, Стрілки та Стрибок справа) */
+        #controls-left { position: absolute; bottom: 15px; left: 20px; z-index: 5;}
+        #controls-right { position: absolute; bottom: 15px; right: 20px; display: flex; gap: 10px; z-index: 5;}
 
         .touch-btn {
-            width: 60px;
-            height: 60px;
-            background: rgba(15, 15, 25, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 12px;
-            color: #fff;
-            font-size: 1.5rem;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: auto;
-            touch-action: none;
+            width: 60px; height: 60px; background: rgba(15, 15, 25, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 12px;
+            color: #fff; font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; pointer-events: auto;
         }
 
-        #btn-jump {
-            background: rgba(57, 255, 20, 0.15);
-            border-color: var(--neon-green);
-            width: 90px;
-            color: var(--neon-green);
-            font-size: 1rem;
+        #btn-fire {
+            width: 85px; height: 85px; border-radius: 50%;
+            background: rgba(57, 255, 20, 0.15); border-color: var(--neon-green);
+            color: var(--neon-green); font-size: 1.2rem; box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
         }
 
-        /* Модальне вікно ГЕО-КВЕСТУ */
+        #btn-jump { background: rgba(0, 243, 255, 0.15); border-color: var(--neon-blue); color: var(--neon-blue); width: 75px; font-size: 1rem; }
+
+        /* Поп-ап квесту */
         #quiz-modal {
-            display: none;
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 90%;
-            max-width: 550px;
-            background: #0b0f19;
-            border: 3px solid var(--neon-blue);
-            box-shadow: 0 0 30px var(--neon-blue);
-            padding: 20px;
-            border-radius: 8px;
-            z-index: 15;
-            text-align: center;
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; max-width: 550px; background: #0b0f19; border: 3px solid var(--neon-blue);
+            box-shadow: 0 0 30px var(--neon-blue); padding: 20px; border-radius: 8px; z-index: 15; text-align: center;
         }
 
-        #question-text {
-            color: #fff;
-            font-size: 1rem;
-            margin-bottom: 15px;
-            line-height: 1.4;
-        }
-
-        .answers-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
-        }
-
+        #question-text { color: #fff; font-size: 1rem; margin-bottom: 15px; line-height: 1.4; }
+        .answers-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
         .answer-btn {
-            background: #141a29;
-            border: 1px solid #2d3954;
-            color: #fff;
-            padding: 10px 15px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border-radius: 4px;
-            text-align: left;
+            background: #141a29; border: 1px solid #2d3954; color: #fff; padding: 12px;
+            font-family: inherit; font-size: 0.9rem; cursor: pointer; border-radius: 4px; text-align: left;
         }
+        .answer-btn:active { background: #1e2942; border-color: var(--neon-green); }
+        #feedback { margin-top: 12px; font-weight: bold; font-size: 0.9rem; min-height: 18px; }
 
-        .answer-btn:active {
-            background: #1e2942;
-            border-color: var(--neon-green);
-        }
-
-        #feedback {
-            margin-top: 12px;
-            font-weight: bold;
-            font-size: 0.9rem;
-            min-height: 18px;
-        }
-
-        /* Орієнтація екрану та медіа-адаптація */
         @media (max-width: 820px) {
-            h1 { font-size: 1.6rem; }
-            .subtitle { font-size: 1.1rem; }
-            .description { font-size: 0.75rem; margin-bottom: 15px; }
+            h1 { font-size: 1.6rem; } .subtitle { font-size: 1.1rem; }
             .touch-btn { width: 50px; height: 50px; font-size: 1.2rem; }
-            #btn-jump { width: 80px; font-size: 0.8rem; }
+            #btn-fire { width: 70px; height: 70px; font-size: 1rem; }
+            #btn-jump { width: 65px; font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -210,145 +91,140 @@
         <div id="start-screen" class="overlay-screen">
             <h1>Кібер-Лисиця</h1>
             <div class="subtitle">Навігатор Даних</div>
-            <p class="description">
-                Системний збій знищив карти 6-го класу! Пройди через 5 районів геоданих, знайди джерела інформації та синхронізуй систему.
-            </p>
-            <button class="btn-action-panel" onclick="startGame()">ЗАПУСТИТИ</button>
+            <p class="description">Увага! Системні віруси захопили географічні бази даних. Використовуй постріли, щоб розчистити шлях, збери всі джерела та віднови знання!</p>
+            <button class="btn-action-panel" onclick="startGame()">ПОЇХАЛИ</button>
         </div>
 
         <div id="victory-screen" class="overlay-screen" style="display: none; border-color: var(--neon-blue);">
             <h1>СИСТЕМУ ВІДНОВЛЕНО!</h1>
-            <div class="subtitle" style="color: var(--neon-blue); text-shadow: 0 0 8px var(--neon-blue);">МАГІСТР ГЕОДАНІВ</div>
-            <p class="description">
-                Вітаємо! Кібер-Лисиця успішно зібрала та проаналізувала всі джерела географічної інформації. 6 клас врятовано!
-            </p>
-            <button class="btn-action-panel" style="background-color: var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue);" onclick="restartGame()">ЗАНОВО</button>
+            <div class="subtitle" style="color: var(--neon-blue);">МАГІСТР ГЕОДАНІВ</div>
+            <p class="description">Вітаємо! Ти успішно знищив віруси та відновив усі географічні карти.</p>
+            <button class="btn-action-panel" style="background-color: var(--neon-blue);" onclick="restartGame()">ЗАНОВО</button>
         </div>
 
         <canvas id="gameCanvas" width="800" height="450"></canvas>
 
         <div id="quiz-modal">
-            <h3 id="question-text">Запитання завантажується...</h3>
+            <h3 id="question-text"></h3>
             <div class="answers-grid" id="answers-container"></div>
             <div id="feedback"></div>
         </div>
 
-        <div id="controls">
-            <div style="display: flex; gap: 12px;">
-                <div class="touch-btn" id="btn-left">←</div>
-                <div class="touch-btn" id="btn-right">→</div>
-            </div>
-            <div class="touch-btn" id="btn-jump">СТРИБОК</div>
+        <div id="controls-left">
+            <div class="touch-btn" id="btn-fire">FIRE</div>
+        </div>
+        <div id="controls-right">
+            <div class="touch-btn" id="btn-left">←</div>
+            <div class="touch-btn" id="btn-right">→</div>
+            <div class="touch-btn" id="btn-jump">СТРИБ</div>
         </div>
     </div>
 
     <script>
+        // ================= AUDIO СИНТЕЗАТОР =================
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'shoot') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'jump') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'hit') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            } else if (type === 'win') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+                osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1); // C#5
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.2); // E5
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+            }
+        }
+
+        // ================= ІГРОВИЙ РУШІЙ =================
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        let gameActive = false;
-        let isQuizActive = false;
-        let currentLevel = 1;
-        let score = 0;
+        let gameActive = false; let isQuizActive = false;
+        let currentLevel = 1; let score = 0;
+        let screenFlash = 0; // Для ефекту отримання шкоди
 
-        // База даних 5 рівнів (Конфігурація карт та квестів)
         const levelsConfig = [
             {
-                name: "1. ПАПЕРОВІ ДЖЕРЕЛА",
-                gridColor: "#112415",
-                platStroke: "#39ff14",
-                label: "АТЛАС 6 КЛАСУ",
-                platforms: [
-                    { x: 0, y: 400, width: 800, height: 50 },
-                    { x: 220, y: 300, width: 140, height: 15 },
-                    { x: 480, y: 210, width: 160, height: 15 }
-                ],
-                target: { x: 550, y: 160 },
-                question: "РІВЕНЬ 1: Що з переліченого є класичним друкованим (паперовим) джерелом географічних знань?",
-                answers: ["Супутниковий трекер", "Географічний атлас", "Цифрова модель рельєфу", "Радіолокатор"],
-                correct: 1
+                name: "РАЙОН 1: ПАПЕРОВІ ДЖЕРЕЛА", gridColor: "#112415", platStroke: "#39ff14", targetLabel: "АТЛАС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 200, y: 300, width: 200, height: 15}, {x: 500, y: 220, width: 160, height: 15} ],
+                enemies: [ {x: 250, y: 270, width: 24, height: 30, speed: 1.5, dir: 1, pIdx: 1} ],
+                target: { x: 550, y: 170 },
+                question: "Що з переліченого є класичним друкованим джерелом географічних знань?",
+                answers: ["Супутниковий трекер", "Географічний атлас", "3D модель рельєфу", "Радіолокатор"], correct: 1
             },
             {
-                name: "2. ОБ'ЄМНІ МОДЕЛІ",
-                gridColor: "#0b1f24",
-                platStroke: "#00f3ff",
-                label: "3D ГЛОБУС",
-                platforms: [
-                    { x: 0, y: 400, width: 800, height: 50 },
-                    { x: 120, y: 310, width: 130, height: 15 },
-                    { x: 340, y: 230, width: 130, height: 15 },
-                    { x: 560, y: 150, width: 130, height: 15 }
-                ],
-                target: { x: 610, y: 100 },
-                question: "РІВЕНЬ 2: Яка тривимірна модель Землі найкраще відображає її форму без розривів та спотворень площ?",
-                answers: ["Контурна карта", "Глобус", "Настінна фізична карта", "План евакуації"],
-                correct: 1
+                name: "РАЙОН 2: ОБ'ЄМНІ МОДЕЛІ", gridColor: "#0b1f24", platStroke: "#00f3ff", targetLabel: "ГЛОБУС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 120, y: 320, width: 150, height: 15}, {x: 350, y: 240, width: 150, height: 15}, {x: 600, y: 160, width: 100, height: 15} ],
+                enemies: [ {x: 400, y: 210, width: 24, height: 30, speed: 2, dir: -1, pIdx: 2}, {x: 600, y: 370, width: 24, height: 30, speed: 1, dir: 1, pIdx: 0} ],
+                target: { x: 620, y: 110 },
+                question: "Яка тривимірна модель Землі найкраще відображає її форму без спотворень?",
+                answers: ["Контурна карта", "Глобус", "Настінна карта", "План евакуації"], correct: 1
             },
             {
-                name: "3. НАВІГАЦІЙНІ ПРИЛАДИ",
-                gridColor: "#240b20",
-                platStroke: "#ff007f",
-                label: "КІБЕР-КОМПАС",
-                platforms: [
-                    { x: 0, y: 400, width: 800, height: 50 },
-                    { x: 200, y: 290, width: 110, height: 15 },
-                    { x: 400, y: 290, width: 110, height: 15 },
-                    { x: 600, y: 190, width: 140, height: 15 }
-                ],
-                target: { x: 650, y: 140 },
-                question: "РІВЕНЬ 3: Який традиційний прилад використовують географи для визначення азимуту та сторін горизонту на місцевості?",
-                answers: ["Барометр", "Компас", "Гідрометр", "Телескоп"],
-                correct: 1
+                name: "РАЙОН 3: НАВІГАЦІЯ", gridColor: "#240b20", platStroke: "#ff007f", targetLabel: "КОМПАС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 200, y: 290, width: 150, height: 15}, {x: 400, y: 190, width: 150, height: 15} ],
+                enemies: [ {x: 420, y: 160, width: 24, height: 30, speed: 2.5, dir: 1, pIdx: 2} ],
+                target: { x: 450, y: 140 },
+                question: "Який традиційний прилад використовують для визначення азимуту?",
+                answers: ["Барометр", "Компас", "Гідрометр", "Телескоп"], correct: 1
             },
             {
-                name: "4. АЕРОКОСМІЧНІ ЗНІМКИ",
-                gridColor: "#24200b",
-                platStroke: "#ffff00",
-                label: "СУПУТНИКОВА ДИСКЕТА",
-                platforms: [
-                    { x: 0, y: 400, width: 800, height: 50 },
-                    { x: 250, y: 310, width: 300, height: 15 },
-                    { x: 90, y: 220, width: 110, height: 15 },
-                    { x: 600, y: 220, width: 110, height: 15 }
-                ],
-                target: { x: 130, y: 170 },
-                question: "РІВЕНЬ 4: Які джерела інформації отримують з орбітальних апаратів для фіксації масштабних змін клімату чи вирубки лісів?",
-                answers: ["Описи античних істориків", "Космічні знімки", "Глибоководне буріння", "Опитування місцевих жителів"],
-                correct: 1
+                name: "РАЙОН 4: КОСМОС", gridColor: "#24200b", platStroke: "#ffff00", targetLabel: "СУПУТНИК",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 300, y: 330, width: 200, height: 15}, {x: 100, y: 250, width: 120, height: 15}, {x: 550, y: 200, width: 150, height: 15} ],
+                enemies: [ {x: 350, y: 300, width: 24, height: 30, speed: 1.5, dir: 1, pIdx: 1}, {x: 580, y: 170, width: 24, height: 30, speed: 2, dir: -1, pIdx: 3} ],
+                target: { x: 120, y: 200 },
+                question: "Які джерела отримують з орбітальних апаратів?",
+                answers: ["Описи істориків", "Космічні знімки", "Глибоководне буріння", "Опитування"], correct: 1
             },
             {
-                name: "5. ГЕОІНФОРМАЦІЙНІ СИСТЕМИ (ГІС)",
-                gridColor: "#1d0b24",
-                platStroke: "#b000ff",
-                label: "ЯДРО ГІС-ДАНІХ",
-                platforms: [
-                    { x: 0, y: 400, width: 800, height: 50 },
-                    { x: 100, y: 330, width: 90, height: 15 },
-                    { x: 260, y: 260, width: 90, height: 15 },
-                    { x: 430, y: 190, width: 90, height: 15 },
-                    { x: 600, y: 120, width: 120, height: 15 }
-                ],
-                target: { x: 650, y: 70 },
-                question: "РІВЕНЬ 5: Як називаються сучасні цифрові комп'ютерні системи, що об'єднують карти, бази даних та GPS-навігацію?",
-                answers: ["Друкарські верстати", "Енциклопедії", "Геоінформаційні системи (ГІС)", "Аналогові архіви"],
-                correct: 2
+                name: "РАЙОН 5: ГІС", gridColor: "#1d0b24", platStroke: "#b000ff", targetLabel: "БАЗА ГІС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 100, y: 320, width: 100, height: 15}, {x: 280, y: 250, width: 100, height: 15}, {x: 460, y: 180, width: 100, height: 15}, {x: 640, y: 110, width: 100, height: 15} ],
+                enemies: [ {x: 300, y: 220, width: 24, height: 30, speed: 3, dir: 1, pIdx: 2}, {x: 480, y: 150, width: 24, height: 30, speed: 3, dir: -1, pIdx: 3} ],
+                target: { x: 670, y: 60 },
+                question: "Як називаються комп'ютерні системи, що об'єднують карти та бази даних?",
+                answers: ["Друкарні", "Енциклопедії", "Геоінформаційні системи (ГІС)", "Архіви"], correct: 2
             }
         ];
 
-        // Фізичні змінні гравця
+        // ЗБІЛЬШЕНА ЛИСИЧКА (48x68 замість 36x51)
         const player = {
-            x: 60, y: 300, width: 36, height: 51, // Пропорції 12х17 пікселів матриці
-            speed: 5.5, velX: 0, velY: 0,
-            jumping: false, grounded: false
+            x: 50, y: 300, width: 48, height: 68, speed: 5.5, velX: 0, velY: 0,
+            jumping: false, grounded: false, facingRight: true, hp: 100, maxHp: 100, invulnerable: 0
         };
 
-        const gravity = 0.55;
-        const friction = 0.78;
-
-        // Стан контролерів
+        const gravity = 0.55; const friction = 0.78;
         const keys = { Left: false, Right: false, Jump: false };
+        let projectiles = [];
+        let activeEnemies = [];
 
-        // Ініціалізація клавіатури ПК
         document.body.addEventListener("keydown", (e) => { handleKey(e.code, true); });
         document.body.addEventListener("keyup", (e) => { handleKey(e.code, false); });
 
@@ -356,39 +232,32 @@
             if (code === "ArrowRight" || code === "KeyD") keys.Right = isPressed;
             if (code === "ArrowLeft" || code === "KeyA") keys.Left = isPressed;
             if (code === "Space" || code === "ArrowUp" || code === "KeyW") keys.Jump = isPressed;
+            if (code === "Enter" || code === "KeyF") { if(isPressed && gameActive) shoot(); }
         }
 
-        // Налаштування тач-інтерфейсу (Мультитач без багів для Android/iOS)
         setupTouchButton('btn-left', 'Left');
         setupTouchButton('btn-right', 'Right');
         setupTouchButton('btn-jump', 'Jump');
+        
+        // Кнопка стрільби
+        document.getElementById('btn-fire').addEventListener('touchstart', (e) => {
+            e.preventDefault(); if(gameActive && !isQuizActive) shoot();
+        });
+        document.getElementById('btn-fire').addEventListener('mousedown', (e) => {
+            e.preventDefault(); if(gameActive && !isQuizActive) shoot();
+        });
 
-        function setupTouchButton(elementId, keyStateName) {
-            const btn = document.getElementById(elementId);
-            
-            btn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys[keyStateName] = true;
-            }, { passive: false });
-
-            btn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keys[keyStateName] = false;
-            }, { passive: false });
-            
-            btn.addEventListener('touchcancel', (e) => {
-                e.preventDefault();
-                keys[keyStateName] = false;
-            }, { passive: false });
+        function setupTouchButton(id, key) {
+            const btn = document.getElementById(id);
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; }, {passive:false});
+            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; }, {passive:false});
         }
 
         function startGame() {
+            audioCtx.resume();
             document.getElementById('start-screen').style.display = 'none';
-            gameActive = true;
-            currentLevel = 1;
-            score = 0;
-            loadLevel();
-            gameLoop();
+            gameActive = true; currentLevel = 1; score = 0; player.hp = 100;
+            loadLevel(); gameLoop();
         }
 
         function restartGame() {
@@ -397,258 +266,101 @@
         }
 
         function loadLevel() {
-            player.x = 60;
-            player.y = 300;
-            player.velX = 0;
-            player.velY = 0;
-            isQuizActive = false;
+            player.x = 50; player.y = 300; player.velX = 0; player.velY = 0;
+            projectiles = []; isQuizActive = false;
             document.getElementById('quiz-modal').style.display = 'none';
+            
+            // Клонування ворогів для рівня
+            activeEnemies = JSON.parse(JSON.stringify(levelsConfig[currentLevel - 1].enemies));
+        }
+
+        function shoot() {
+            playSound('shoot');
+            projectiles.push({
+                x: player.facingRight ? player.x + player.width : player.x,
+                y: player.y + player.height / 2,
+                speed: player.facingRight ? 12 : -12,
+                width: 15, height: 5
+            });
         }
 
         function gameLoop() {
             if (!gameActive) return;
-
-            if (!isQuizActive) {
-                updatePhysics();
-            }
+            if (!isQuizActive) updatePhysics();
             render();
-
             requestAnimationFrame(gameLoop);
         }
 
         function updatePhysics() {
-            const currentLvlData = levelsConfig[currentLevel - 1];
+            const lvl = levelsConfig[currentLevel - 1];
 
-            // Горизонтальне прискорення
-            if (keys.Right) {
-                if (player.velX < player.speed) player.velX += 0.8;
-            } else if (keys.Left) {
-                if (player.velX > -player.speed) player.velX -= 0.8;
-            } else {
-                player.velX *= friction;
-            }
+            // Гравець
+            if (keys.Right) { if (player.velX < player.speed) player.velX += 0.8; player.facingRight = true; } 
+            else if (keys.Left) { if (player.velX > -player.speed) player.velX -= 0.8; player.facingRight = false; } 
+            else { player.velX *= friction; }
 
-            // Розумна соковита важкість (Snappy Jump Physics)
-            if (player.velY < 0 && !keys.Jump) {
-                player.velY += gravity * 2.6; // Переривання висоти якщо відпустили тач/кнопку
-            } else if (player.velY > 0) {
-                player.velY += gravity * 1.6; // Важче падіння вниз
-            } else {
-                player.velY += gravity;
-            }
+            if (player.velY < 0 && !keys.Jump) player.velY += gravity * 2.6;
+            else if (player.velY > 0) player.velY += gravity * 1.6;
+            else player.velY += gravity;
 
             player.grounded = false;
 
-            // Колізії з платформами поточного рівня
-            for (let i = 0; i < currentLvlData.platforms.length; i++) {
-                let plat = currentLvlData.platforms[i];
-                let dir = checkCollision(player, plat);
-
-                if (dir === "l" || dir === "r") {
-                    player.velX = 0;
-                } else if (dir === "b") {
-                    player.grounded = true;
-                    player.jumping = false;
-                } else if (dir === "t") {
-                    player.velY = 0;
-                }
+            for (let i = 0; i < lvl.platforms.length; i++) {
+                let dir = checkCollision(player, lvl.platforms[i]);
+                if (dir === "l" || dir === "r") player.velX = 0;
+                else if (dir === "b") { player.grounded = true; player.jumping = false; }
+                else if (dir === "t") player.velY = 0;
             }
 
             if (player.grounded) player.velY = 0;
-
-            // Запуск стрибка
             if (keys.Jump && !player.jumping && player.grounded) {
-                player.jumping = true;
-                player.grounded = false;
-                player.velY = -11.5;
+                playSound('jump'); player.jumping = true; player.grounded = false; player.velY = -12;
             }
 
-            player.x += player.velX;
-            player.y += player.velY;
-
-            // Стіни екрану
+            player.x += player.velX; player.y += player.velY;
             if (player.x < 0) player.x = 0;
             if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
 
-            // Зіткнення з цільовим Гео-джерелом
-            let target = currentLvlData.target;
-            if (player.x < target.x + 25 && player.x + player.width > target.x &&
-                player.y < target.y + 25 && player.y + player.height > target.y) {
-                triggerQuiz();
-            }
-        }
-
-        function checkCollision(shapeA, shapeB) {
-            let vX = (shapeA.x + (shapeA.width / 2)) - (shapeB.x + (shapeB.width / 2)),
-                vY = (shapeA.y + (shapeA.height / 2)) - (shapeB.y + (shapeB.height / 2)),
-                hWidths = (shapeA.width / 2) + (shapeB.width / 2),
-                hHeights = (shapeA.height / 2) + (shapeB.height / 2),
-                colDir = null;
-
-            if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
-                let oX = hWidths - Math.abs(vX), oY = hHeights - Math.abs(vY);
-                if (oX >= oY) {
-                    if (vY > 0) { colDir = "t"; shapeA.y += oY; } 
-                    else { colDir = "b"; shapeA.y -= oY; }
-                } else {
-                    if (vX > 0) { colDir = "l"; shapeA.x += oX; } 
-                    else { colDir = "r"; shapeA.x -= oX; }
+            // Вороги
+            activeEnemies.forEach((enemy, eIdx) => {
+                enemy.x += enemy.speed * enemy.dir;
+                let plat = lvl.platforms[enemy.pIdx];
+                if (enemy.x <= plat.x || enemy.x + enemy.width >= plat.x + plat.width) {
+                    enemy.dir *= -1; // Патрулювання
                 }
-            }
-            return colDir;
-        }
 
-        function triggerQuiz() {
-            isQuizActive = true;
-            // Скидання натискань щоб персонаж не біг сам під час тесту
-            keys.Left = keys.Right = keys.Jump = false;
-
-            const modal = document.getElementById('quiz-modal');
-            const qText = document.getElementById('question-text');
-            const container = document.getElementById('answers-container');
-            const feedback = document.getElementById('feedback');
-            
-            feedback.innerText = "";
-            container.innerHTML = "";
-            
-            const lvlData = levelsConfig[currentLevel - 1];
-            qText.innerText = lvlData.question;
-
-            lvlData.answers.forEach((ans, index) => {
-                const btn = document.createElement('button');
-                btn.className = 'answer-btn';
-                btn.innerText = `${index + 1}. ${ans}`;
-                btn.onclick = () => verifyAnswer(index, lvlData.correct);
-                container.appendChild(btn);
+                // Зіткнення гравця з ворогом
+                if (player.invulnerable <= 0 && intersectRect(player, enemy)) {
+                    playSound('hit');
+                    player.hp -= 20;
+                    player.invulnerable = 60; // Кадри невразливості
+                    player.velY = -5; // Відкидання
+                    player.velX = enemy.dir * 5;
+                    screenFlash = 10;
+                    if (player.hp <= 0) { player.hp = 100; loadLevel(); } // Рестарт рівня
+                }
             });
 
-            modal.style.display = 'block';
-        }
+            if (player.invulnerable > 0) player.invulnerable--;
+            if (screenFlash > 0) screenFlash--;
 
-        function verifyAnswer(selected, correct) {
-            const feedback = document.getElementById('feedback');
-            if (selected === correct) {
-                feedback.style.color = "#39ff14";
-                feedback.innerText = "УСПІШНА СИНХРОНІЗАЦІЯ! Дані інтегровано.";
-                score += 200;
-                
-                setTimeout(() => {
-                    if (currentLevel < 5) {
-                        currentLevel++;
-                        loadLevel();
-                    } else {
-                        // Перемога після 5 рівнів
-                        gameActive = false;
-                        document.getElementById('quiz-modal').style.display = 'none';
-                        document.getElementById('victory-screen').style.display = 'flex';
-                    }
-                }, 1400);
-            } else {
-                feedback.style.color = "#ff0055";
-                feedback.innerText = "ПОМИЛКА ДЖЕРЕЛА! Спробуй ще раз.";
-            }
-        }
+            // Постріли
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                p.x += p.speed;
+                if (p.x < 0 || p.x > canvas.width) { projectiles.splice(i, 1); continue; }
 
-        // Рендеринг графіки
-        let pulseTime = 0;
-        function render() {
-            const lvlData = levelsConfig[currentLevel - 1];
-
-            // Статичний фон
-            ctx.fillStyle = '#060608';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Ретро кібер-сітка з кастомним кольором під кожен рівень
-            ctx.strokeStyle = lvlData.gridColor;
-            ctx.lineWidth = 1;
-            for(let i=0; i<canvas.width; i+=40) {
-                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-            }
-            for(let j=0; j<canvas.height; j+=40) {
-                ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(canvas.width, j); ctx.stroke();
-            }
-
-            // Рендер HUD інформації
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 13px "Courier New"';
-            ctx.fillText(`РАЙОН: ${lvlData.name}`, 25, 35);
-            
-            ctx.fillStyle = lvlData.platStroke;
-            ctx.fillText(`МАТРИЦЯ ЗНАНЬ: ${score} XP`, 570, 35);
-
-            // Платформи
-            ctx.fillStyle = '#111217';
-            ctx.strokeStyle = lvlData.platStroke;
-            ctx.lineWidth = 2;
-            lvlData.platforms.forEach(plat => {
-                ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
-                ctx.strokeRect(plat.x, plat.y, plat.width, plat.height);
-            });
-
-            // Гео-джерело (Предмет)
-            pulseTime += 0.08;
-            let pulseOffset = Math.sin(pulseTime) * 4;
-            ctx.fillStyle = '#fff';
-            ctx.font = '9px monospace';
-            ctx.fillText(lvlData.label, lvlData.target.x - 25, lvlData.target.y - 12);
-
-            ctx.fillStyle = '#00f3ff';
-            ctx.fillRect(lvlData.target.x - pulseOffset/2, lvlData.target.y - pulseOffset/2, 22 + pulseOffset, 22 + pulseOffset);
-
-            // ================================================================
-            // СПРАЙТ КІБЕР-ЛИСИЧКИ (12х17 МАТРИЦЯ ПІКСЕЛІВ)
-            // ================================================================
-            const foxMap = [
-                ". . O . . . . . O . . .", 
-                ". O O . . . . . O O . .", 
-                ". O B B B B B B B O . .", 
-                ". B B B B B B B B B . .", 
-                ". B B S S S S S B B . .", 
-                ". B G G G G G G G B . .", 
-                ". B G G G G G G G B . .", 
-                ". . S S F F F S S . . .", 
-                ". . S S F F F S S . . .", 
-                ". . J J N W N J J . . .", 
-                ". J J J J J J J J . . .", 
-                ". J N J J J J N J . . .", 
-                ". J J J J J J J J . . .", 
-                ". J J J J J J J J . . .", 
-                ". . F F . . . F F . . .", 
-                ". . F F . . . F F . . .", 
-                ". J J . . . . J J . . ."  
-            ];
-
-            const pixelW = player.width / 12;
-            const pixelH = player.height / 17;
-
-            const colors = {
-                '.': null,        
-                'O': '#b84300',   
-                'F': '#e67e22',   
-                'B': '#f1c40f',   
-                'G': '#00f3ff',   
-                'S': '#fdebd0',   
-                'J': '#1c1c24',   
-                'W': '#ffffff',   
-                'N': '#39ff14'    
-            };
-
-            for (let row = 0; row < foxMap.length; row++) {
-                const pixels = foxMap[row].split(' ');
-                for (let col = 0; col < pixels.length; col++) {
-                    const clr = colors[pixels[col]];
-                    if (clr) {
-                        ctx.fillStyle = clr;
-                        ctx.fillRect(
-                            player.x + (col * pixelW), 
-                            player.y + (row * pixelH), 
-                            pixelW + 0.4, 
-                            pixelH + 0.4
-                        );
+                // Влучання у ворога
+                for (let j = activeEnemies.length - 1; j >= 0; j--) {
+                    if (intersectRect(p, activeEnemies[j])) {
+                        playSound('hit');
+                        activeEnemies.splice(j, 1);
+                        projectiles.splice(i, 1);
+                        score += 50;
+                        break;
                     }
                 }
             }
-        }
-    </script>
-</body>
-</html>
+
+            // Ціль
+            if (intersectRect(player, {
