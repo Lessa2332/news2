@@ -3,129 +3,640 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Кібер-Лисиця 2026</title>
+    <title>Кібер-Лисиця 2026 — 9:16</title>
     <style>
+        :root {
+            --neon-green: #39ff14;
+            --neon-blue: #00f3ff;
+            --neon-red: #ff003c;
+            --dark-bg: #000000;
+        }
+
         * { 
-            box-sizing: border-box; margin: 0; padding: 0; 
-            user-select: none; -webkit-user-select: none; 
-            touch-action: none; /* Забороняє браузеру гортати сторінку */
-            -webkit-tap-highlight-color: transparent; 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            user-select: none; 
+            -webkit-user-select: none; 
+            -webkit-touch-callout: none; 
         }
 
-        html, body { 
-            width: 100%; height: 100%; 
-            overflow: hidden; background: #000; 
-            color: #fff; font-family: 'Courier New', monospace;
+        html, body {
+            position: fixed; 
+            top: 0; left: 0;
+            width: 100vw; 
+            height: 100vh; 
+            overflow: hidden;
+            background-color: #000; 
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none;
         }
 
-        #game-container { 
-            position: fixed; /* Фіксуємо контейнер */
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            display: flex; align-items: center; justify-content: center;
-            /* Відступ знизу, щоб Android-панель не перекривала кнопки */
-            padding-bottom: env(safe-area-inset-bottom);
+        /* Контейнер для вертикальної гри (9:16) */
+        #game-container {
+            position: relative; 
+            width: 100%; 
+            height: 100%;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            background: #000;
         }
 
+        /* Канвас тепер має внутрішнє розширення 450x800 (9:16) */
         canvas { 
-            width: 100%; height: 100%; 
-            object-fit: contain; 
-            image-rendering: pixelated; 
+            width: auto;
+            height: 100%;
+            max-width: 100%;
+            aspect-ratio: 450 / 800;
+            display: block; 
+            image-rendering: crisp-edges; 
+            box-shadow: 0 0 0 2px #0f0f1f;
         }
 
-        /* КНОПКИ: Z-index найвищий */
-        .controls-layer {
-            position: absolute;
-            bottom: 80px; /* ПІДНЯВ КНОПКИ ВИЩЕ */
-            left: 0; right: 0;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 30px;
-            z-index: 9999;
-            pointer-events: none; /* Щоб не перекривало канвас */
+        /* Екрани меню */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #0a0f1a 0%, #010105 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 20; padding: 20px; text-align: center;
+        }
+
+        h1 { font-size: 2.4rem; text-shadow: 0 0 12px var(--neon-blue); margin-bottom: 8px; letter-spacing: 2px; }
+        .subtitle { font-size: 1.2rem; color: var(--neon-green); text-shadow: 0 0 6px var(--neon-green); margin-bottom: 20px; font-weight: bold; }
+        .description { max-width: 90%; font-size: 0.9rem; line-height: 1.4; margin-bottom: 28px; color: #ccc; }
+        
+        .btn-action-panel {
+            background-color: var(--neon-green); color: #000; border: none; padding: 14px 36px;
+            font-size: 1.3rem; font-weight: bold; border-radius: 40px; box-shadow: 0 0 18px var(--neon-green);
+            cursor: pointer; transition: 0.1s linear;
+        }
+        .btn-action-panel:active { transform: scale(0.96); }
+
+        /* Сенсорна панель — великі кнопки для пальців, враховуємо safe zone */
+        #controls-left { 
+            position: absolute; 
+            bottom: max(18px, env(safe-area-inset-bottom)); 
+            left: max(18px, env(safe-area-inset-left)); 
+            z-index: 15;
+        }
+        #controls-right { 
+            position: absolute; 
+            bottom: max(18px, env(safe-area-inset-bottom)); 
+            right: max(18px, env(safe-area-inset-right)); 
+            display: flex; 
+            gap: 14px; 
+            z-index: 15;
         }
 
         .touch-btn {
-            pointer-events: auto; /* АЛЕ КНОПКИ МАЮТЬ РЕАГУВАТИ */
-            width: 70px; height: 70px; 
-            background: rgba(255, 255, 255, 0.15);
-            border: 3px solid #fff; 
-            border-radius: 15px;
-            color: #fff; font-size: 1.2rem; font-weight: bold;
-            display: flex; align-items: center; justify-content: center;
+            width: 72px; height: 72px; background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255, 255, 255, 0.55); border-radius: 24px;
+            color: white; font-size: 1.7rem; font-weight: bold; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; transition: 0.05s linear;
+        }
+        .touch-btn:active { transform: scale(0.92); background: rgba(57, 255, 20, 0.3); }
+
+        #btn-fire {
+            width: 88px; height: 88px; border-radius: 44px;
+            background: rgba(255, 0, 60, 0.25); border-color: var(--neon-red);
+            color: var(--neon-red); font-size: 1.2rem; font-weight: bold;
+            box-shadow: 0 0 18px rgba(255, 0, 60, 0.6);
         }
 
-        #btn-fire { background: rgba(255, 0, 60, 0.3); border-color: #ff003c; }
-        #btn-jump { background: rgba(0, 243, 255, 0.3); border-color: #00f3ff; }
+        #btn-jump { background: rgba(0, 243, 255, 0.2); border-color: var(--neon-blue); color: var(--neon-blue); width: 80px; font-size: 1rem; }
 
-        .overlay-screen { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: #000; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; z-index: 10000; 
+        /* Модалка вікторини */
+        #quiz-modal {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 86%; max-width: 380px; background: #070c18; border: 2.5px solid var(--neon-blue);
+            box-shadow: 0 0 35px var(--neon-blue); padding: 20px; border-radius: 28px; z-index: 25; text-align: center;
         }
+        #question-text { color: #fff; font-size: 1rem; margin-bottom: 18px; font-weight: bold; line-height: 1.4; }
+        .answers-grid { display: flex; flex-direction: column; gap: 12px; }
+        .answer-btn {
+            background: #111927; border: 1px solid #2f3b5c; color: #eef; padding: 12px;
+            font-family: inherit; font-size: 0.9rem; border-radius: 60px; text-align: center;
+            cursor: pointer; transition: 0.07s linear;
+        }
+        .answer-btn:active { background: #1f2a44; border-color: var(--neon-green); transform: scale(0.97); }
+        #feedback { margin-top: 16px; font-weight: bold; font-size: 0.9rem; min-height: 24px; }
 
-        .btn-action { 
-            background: #39ff14; color: #000; padding: 20px 40px; 
-            font-size: 1.5rem; font-weight: bold; border-radius: 10px; border: none;
-            box-shadow: 0 0 20px #39ff14; cursor: pointer;
+        @media (max-width: 550px) {
+            .touch-btn { width: 64px; height: 64px; font-size: 1.4rem; border-radius: 20px; }
+            #btn-fire { width: 80px; height: 80px; font-size: 1rem; }
+            #btn-jump { width: 70px; font-size: 0.9rem; }
+            h1 { font-size: 1.8rem; }
         }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="start-screen" class="overlay-screen">
-            <h1>КІБЕР-ЛИСИЦЯ 2026</h1>
-            <p style="margin-bottom: 20px;">Натисни, щоб почати</p>
-            <button class="btn-action" onclick="startGame()">ПОЇХАЛИ</button>
-        </div>
 
-        <canvas id="gameCanvas" width="800" height="450"></canvas>
-
-        <div class="controls-layer">
-            <div id="btn-fire" class="touch-btn">FIRE</div>
-            <div style="display:flex; gap: 10px;">
-                <div id="btn-left" class="touch-btn">←</div>
-                <div id="btn-right" class="touch-btn">→</div>
-                <div id="btn-jump" class="touch-btn">↑</div>
-            </div>
-        </div>
+<div id="game-container">
+    <div id="start-screen" class="overlay-screen">
+        <h1>Кібер-Лисиця</h1>
+        <div class="subtitle">Навігатор Геоданих 9:16</div>
+        <p class="description">Знищуй вірусні глюки, збирай артефакти картографії та відновлюй географічну матрицю 6-го класу.</p>
+        <button class="btn-action-panel" id="startBtn">СТАРТ</button>
     </div>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+    <div id="victory-screen" class="overlay-screen" style="display: none;">
+        <h1>МАТРИЦЮ ВІДНОВЛЕНО!</h1>
+        <div class="subtitle" style="color: var(--neon-blue);">МАГІСТР ГЕОГРАФІЇ 2026</div>
+        <p class="description">Вітаємо! Усі 5 секторів геоданих очищено. Систему знань повністю синхронізовано.</p>
+        <button class="btn-action-panel" id="victoryRestartBtn" style="background-color: var(--neon-blue); box-shadow: 0 0 20px var(--neon-blue);">ЗАНОВО</button>
+    </div>
+
+    <canvas id="gameCanvas" width="450" height="800"></canvas>
+
+    <div id="quiz-modal">
+        <h3 id="question-text">Завантаження...</h3>
+        <div class="answers-grid" id="answers-container"></div>
+        <div id="feedback"></div>
+    </div>
+
+    <div id="controls-left">
+        <div class="touch-btn" id="btn-fire">⚡FIRE</div>
+    </div>
+    <div id="controls-right">
+        <div class="touch-btn" id="btn-left">◀</div>
+        <div class="touch-btn" id="btn-right">▶</div>
+        <div class="touch-btn" id="btn-jump">СТРИБ</div>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // -------- НОВІ РОЗМІРИ 9:16 ----------
+        const CANVAS_W = 450;
+        const CANVAS_H = 800;
+        // Оригінальний дизайн був 800x450
+        const OG_W = 800;
+        const OG_H = 450;
+        const KX = CANVAS_W / OG_W;   // 0.5625
+        const KY = CANVAS_H / OG_H;   // 1.777777...
+        
+        // Фізика масштабується під нову висоту (гравітація, стрибок)
+        const GRAVITY = 0.92;          // 0.55 * (800/450) ≈ 0.98, трохи знижено для кращого контролю
+        const JUMP_POWER = -18;        // -12 * (800/450) ≈ -21, адаптовано для комфорту
+        const PLAYER_SPEED = 6.2;      // швидкість бігу
+        const FRICTION_AIR = 0.82;
+        
+        // -------- ГЛОБАЛЬНІ ЗМІННІ ----------
         let gameActive = false;
-        const keys = { Left: false, Right: false, Jump: false, Fire: false };
-
-        function startGame() {
-            document.getElementById('start-screen').style.display = 'none';
-            gameActive = true;
-            loop();
+        let isQuizActive = false;
+        let currentLevel = 1;
+        let score = 0;
+        let screenFlash = 0;
+        let audioCtx = null;
+        
+        // Оригінальні конфіги рівнів (координати у просторі 800x450)
+        const levelsRaw = [
+            {   name: "РАЙОН 1: ПАПЕРОВІ ДЖЕРЕЛА", gridColor: "#112415", platStroke: "#39ff14", targetLabel: "АТЛАС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 200, y: 300, width: 220, height: 15}, {x: 520, y: 220, width: 160, height: 15} ],
+                enemies: [ {x: 240, y: 270, width: 26, height: 32, speed: 1.5, dir: 1, pIdx: 1} ],
+                target: { x: 570, y: 170, width: 28, height: 28 },
+                question: "Що з переліченого є класичним друкованим джерелом географічних знань?",
+                answers: ["Супутниковий трекер", "Географічний атлас", "3D модель рельєфу", "Радіолокатор"], correct: 1
+            },
+            {   name: "РАЙОН 2: ОБ'ЄМНІ МОДЕЛІ", gridColor: "#0b1f24", platStroke: "#00f3ff", targetLabel: "ГЛОБУС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 120, y: 320, width: 160, height: 15}, {x: 360, y: 240, width: 160, height: 15}, {x: 610, y: 160, width: 110, height: 15} ],
+                enemies: [ {x: 380, y: 210, width: 26, height: 32, speed: 2.0, dir: -1, pIdx: 2}, {x: 580, y: 370, width: 26, height: 32, speed: 1.2, dir: 1, pIdx: 0} ],
+                target: { x: 630, y: 110, width: 28, height: 28 },
+                question: "Яка тривимірна модель Землі найкраще відображає її форму без розривів?",
+                answers: ["Контурна карта", "Глобус", "Настінна фізична карта", "План евакуації"], correct: 1
+            },
+            {   name: "РАЙОН 3: НАВІГАЦІЯ", gridColor: "#240b20", platStroke: "#ff007f", targetLabel: "КОМПАС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 200, y: 290, width: 160, height: 15}, {x: 440, y: 190, width: 160, height: 15} ],
+                enemies: [ {x: 460, y: 160, width: 26, height: 32, speed: 2.2, dir: 1, pIdx: 2} ],
+                target: { x: 490, y: 140, width: 28, height: 28 },
+                question: "Який традиційний прилад використовують для визначення сторін горизонту та азимуту?",
+                answers: ["Барометр", "Компас", "Гідрометр", "Телескоп"], correct: 1
+            },
+            {   name: "РАЙОН 4: КОСМІЧНІ ЗНІМКИ", gridColor: "#24200b", platStroke: "#ffff00", targetLabel: "СУПУТНИК",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 300, y: 330, width: 220, height: 15}, {x: 100, y: 250, width: 130, height: 15}, {x: 560, y: 200, width: 150, height: 15} ],
+                enemies: [ {x: 340, y: 300, width: 26, height: 32, speed: 1.6, dir: 1, pIdx: 1}, {x: 590, y: 170, width: 26, height: 32, speed: 1.9, dir: -1, pIdx: 3} ],
+                target: { x: 130, y: 200, width: 28, height: 28 },
+                question: "Які сучасні джерела геоінформації отримують безпосередньо з навколоземної орбіти?",
+                answers: ["Літописи істориків", "Космічні знімки", "Глибоководне буріння", "Опитування"], correct: 1
+            },
+            {   name: "РАЙОН 5: СИСТЕМИ ГІС", gridColor: "#1d0b24", platStroke: "#b000ff", targetLabel: "ЯДРО ГІС",
+                platforms: [ {x: 0, y: 400, width: 800, height: 50}, {x: 100, y: 320, width: 110, height: 15}, {x: 280, y: 250, width: 110, height: 15}, {x: 460, y: 180, width: 110, height: 15}, {x: 640, y: 110, width: 115, height: 15} ],
+                enemies: [ {x: 300, y: 220, width: 26, height: 32, speed: 2.8, dir: 1, pIdx: 2}, {x: 480, y: 150, width: 26, height: 32, speed: 2.8, dir: -1, pIdx: 3} ],
+                target: { x: 670, y: 60, width: 28, height: 28 },
+                question: "Як називаються комп'ютерні цифрові системи, що поєднують інтерактивні карти та бази даних?",
+                answers: ["Друкарські верстати", "Мультимедійні енциклопедії", "Геоінформаційні системи (ГІС)", "Паперові архіви"], correct: 2
+            }
+        ];
+        
+        // Функції трансформації координат
+        function tx(x) { return x * KX; }
+        function ty(y) { return y * KY; }
+        function tw(w) { return w * KX; }
+        function th(h) { return h * KY; }
+        
+        // Перетворення всього рівня
+        function transformLevel(levelRaw) {
+            const platforms = levelRaw.platforms.map(p => ({
+                x: tx(p.x), y: ty(p.y), width: tw(p.width), height: th(p.height)
+            }));
+            const enemies = levelRaw.enemies.map(e => ({
+                x: tx(e.x), y: ty(e.y), width: tw(e.width), height: th(e.height),
+                speed: e.speed * 1.05,   // трохи пришвидшимо для динаміки
+                dir: e.dir, pIdx: e.pIdx
+            }));
+            const target = {
+                x: tx(levelRaw.target.x), y: ty(levelRaw.target.y),
+                width: tw(levelRaw.target.width), height: th(levelRaw.target.height)
+            };
+            return {
+                ...levelRaw,
+                platforms, enemies, target
+            };
         }
-
-        // Обробка тач-подій з прив'язкою до ID
-        function setupButton(id, key) {
-            const btn = document.getElementById(id);
-            btn.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = true; });
-            btn.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = false; });
+        
+        let currentLevelData = null;
+        let activeEnemies = [];
+        let projectiles = [];
+        
+        // ГРАВЕЦЬ (збільшений лисичка)
+        const player = {
+            x: tx(55), y: ty(300), width: tw(42), height: th(64),
+            velX: 0, velY: 0, speed: PLAYER_SPEED,
+            jumping: false, grounded: false, facingRight: true,
+            hp: 100, maxHp: 100, invulnerable: 0
+        };
+        
+        // Керування
+        const keys = { Left: false, Right: false, Jump: false };
+        
+        // Допоміжні функції
+        function intersectRect(r1, r2) {
+            return !(r2.x > r1.x + r1.width || r2.x + r2.width < r1.x ||
+                r2.y > r1.y + r1.height || r2.y + r2.height < r1.y);
         }
-
-        setupButton('btn-left', 'Left');
-        setupButton('btn-right', 'Right');
-        setupButton('btn-jump', 'Jump');
-        setupButton('btn-fire', 'Fire');
-
-        function loop() {
-            if(!gameActive) return;
-            // Логіка гри...
-            ctx.fillStyle = '#000'; ctx.fillRect(0,0, canvas.width, canvas.height);
-            ctx.fillStyle = '#39ff14'; ctx.fillText("ГРА ПРАЦЮЄ", 350, 200);
+        
+        function checkCollision(shapeA, shapeB) {
+            let vX = (shapeA.x + shapeA.width/2) - (shapeB.x + shapeB.width/2);
+            let vY = (shapeA.y + shapeA.height/2) - (shapeB.y + shapeB.height/2);
+            let hWidths = shapeA.width/2 + shapeB.width/2;
+            let hHeights = shapeA.height/2 + shapeB.height/2;
+            if (Math.abs(vX) < hWidths && Math.abs(vY) < hHeights) {
+                let oX = hWidths - Math.abs(vX);
+                let oY = hHeights - Math.abs(vY);
+                if (oX >= oY) {
+                    if (vY > 0) { shapeA.y += oY; return "t"; }
+                    else { shapeA.y -= oY; return "b"; }
+                } else {
+                    if (vX > 0) { shapeA.x += oX; return "l"; }
+                    else { shapeA.x -= oX; return "r"; }
+                }
+            }
+            return null;
+        }
+        
+        function shoot() {
+            if(!gameActive || isQuizActive) return;
+            playSound('shoot');
+            projectiles.push({
+                x: player.facingRight ? player.x + player.width : player.x - 6,
+                y: player.y + player.height/2 - 3,
+                speed: player.facingRight ? 11 : -11,
+                width: tw(12), height: th(6)
+            });
+        }
+        
+        // Звуки (безпечне відтворення)
+        function playSound(type) {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                if (type === 'shoot') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.09);
+                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+                } else if (type === 'jump') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.12);
+                    gain.gain.setValueAtTime(0.14, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.13);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.13);
+                } else if (type === 'hit') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(70, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.16, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+                }
+            } catch(e) { console.log("audio err"); }
+        }
+        
+        function triggerQuiz() {
+            if(isQuizActive) return;
+            isQuizActive = true;
+            keys.Left = false; keys.Right = false; keys.Jump = false;
+            const modal = document.getElementById('quiz-modal');
+            document.getElementById('feedback').innerText = "";
+            const container = document.getElementById('answers-container');
+            container.innerHTML = "";
+            const lvl = currentLevelData;
+            document.getElementById('question-text').innerText = lvl.question;
+            lvl.answers.forEach((ans, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'answer-btn';
+                btn.innerText = `${idx+1}. ${ans}`;
+                btn.onclick = () => verifyAnswer(idx, lvl.correct);
+                container.appendChild(btn);
+            });
+            modal.style.display = 'block';
+        }
+        
+        function verifyAnswer(selected, correctIdx) {
+            const fb = document.getElementById('feedback');
+            if(selected === correctIdx) {
+                playSound('win');
+                fb.style.color = "#39ff14"; fb.innerText = "✓ СИНХРОНІЗАЦІЯ УСПІШНА! +200 XP";
+                score += 200;
+                setTimeout(() => {
+                    if(currentLevel < 5) {
+                        currentLevel++;
+                        loadLevel();
+                        document.getElementById('quiz-modal').style.display = 'none';
+                        isQuizActive = false;
+                    } else {
+                        gameActive = false;
+                        document.getElementById('quiz-modal').style.display = 'none';
+                        document.getElementById('victory-screen').style.display = 'flex';
+                        isQuizActive = false;
+                    }
+                }, 1300);
+            } else {
+                playSound('hit');
+                fb.style.color = "#ff003c"; fb.innerText = "✗ ПОМИЛКА МАТРИЦІ! Спробуй ще раз.";
+            }
+        }
+        
+        function loadLevel() {
+            const raw = levelsRaw[currentLevel-1];
+            currentLevelData = transformLevel(raw);
+            activeEnemies = currentLevelData.enemies.map(e => ({ ...e }));
+            player.x = tx(50);
+            player.y = ty(300);
+            player.velX = 0; player.velY = 0;
+            player.hp = Math.min(player.hp + 15, 100); // невелике відновлення між рівнями
+            player.invulnerable = 0;
+            projectiles = [];
+            screenFlash = 0;
+            isQuizActive = false;
+            document.getElementById('quiz-modal').style.display = 'none';
+        }
+        
+        function updatePhysics() {
+            if(!currentLevelData) return;
+            // горизонтальний рух
+            if(keys.Right) { if(player.velX < player.speed) player.velX += 0.75; player.facingRight = true; }
+            else if(keys.Left) { if(player.velX > -player.speed) player.velX -= 0.75; player.facingRight = false; }
+            else { player.velX *= FRICTION_AIR; }
             
-            // Якщо натиснуто кнопку:
-            if(keys.Fire) ctx.fillStyle = 'red'; else ctx.fillStyle = '#39ff14';
-            ctx.fillRect(50, 50, 50, 50); // Візуальний тест кнопки
-
-            requestAnimationFrame(loop);
+            player.velY += GRAVITY;
+            player.grounded = false;
+            
+            for(let plat of currentLevelData.platforms) {
+                let dir = checkCollision(player, plat);
+                if(dir === "l" || dir === "r") player.velX = 0;
+                else if(dir === "b") { player.grounded = true; player.jumping = false; player.velY = 0; }
+                else if(dir === "t") player.velY = 0;
+            }
+            
+            if(keys.Jump && !player.jumping && player.grounded) {
+                playSound('jump');
+                player.jumping = true;
+                player.grounded = false;
+                player.velY = JUMP_POWER;
+            }
+            
+            player.x += player.velX;
+            player.y += player.velY;
+            if(player.x < 0) player.x = 0;
+            if(player.x + player.width > CANVAS_W) player.x = CANVAS_W - player.width;
+            if(player.y + player.height > CANVAS_H) player.y = CANVAS_H - player.height;
+            if(player.y < 0) player.y = 0;
+            
+            // вороги
+            for(let i=0; i<activeEnemies.length; i++) {
+                const e = activeEnemies[i];
+                e.x += e.speed * e.dir;
+                const plat = currentLevelData.platforms[e.pIdx];
+                if(e.x <= plat.x || e.x + e.width >= plat.x + plat.width) e.dir *= -1;
+                if(player.invulnerable <= 0 && intersectRect(player, e)) {
+                    playSound('hit');
+                    player.hp -= 20;
+                    player.invulnerable = 55;
+                    player.velY = -6;
+                    player.velX = e.dir * 5;
+                    screenFlash = 12;
+                    if(player.hp <= 0) { player.hp = 80; loadLevel(); }
+                }
+            }
+            if(player.invulnerable > 0) player.invulnerable--;
+            if(screenFlash > 0) screenFlash--;
+            
+            // постріли
+            for(let i=projectiles.length-1; i>=0; i--) {
+                let p = projectiles[i];
+                p.x += p.speed;
+                if(p.x + p.width < 0 || p.x > CANVAS_W) { projectiles.splice(i,1); continue; }
+                let hit = false;
+                for(let j=0; j<activeEnemies.length; j++) {
+                    if(intersectRect(p, activeEnemies[j])) {
+                        playSound('hit');
+                        activeEnemies.splice(j,1);
+                        hit = true;
+                        score += 50;
+                        break;
+                    }
+                }
+                if(hit) { projectiles.splice(i,1); }
+            }
+            
+            // ціль (активація вікторини)
+            if(intersectRect(player, currentLevelData.target)) {
+                triggerQuiz();
+            }
         }
-    </script>
+        
+        // Малювання піксель-лисички
+        let pulse = 0;
+        function render() {
+            if(!currentLevelData) return;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#04060c';
+            ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+            if(screenFlash > 0) {
+                ctx.fillStyle = `rgba(255, 0, 60, ${screenFlash/20})`;
+                ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+            }
+            // сітка
+            ctx.strokeStyle = currentLevelData.gridColor;
+            ctx.lineWidth = 1;
+            for(let i=0; i<CANVAS_W; i+=35) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,CANVAS_H); ctx.stroke(); }
+            for(let i=0; i<CANVAS_H; i+=35) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(CANVAS_W,i); ctx.stroke(); }
+            
+            // хп бар
+            ctx.fillStyle = '#ff003c'; ctx.fillRect(20, 14, 130, 12);
+            ctx.fillStyle = '#39ff14'; ctx.fillRect(20, 14, (player.hp/player.maxHp)*130, 12);
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 10px monospace'; ctx.fillText("HP", 6, 24);
+            ctx.fillStyle = '#0fefef'; ctx.fillText(`${currentLevelData.name.slice(0,18)}`, 165, 24);
+            ctx.fillStyle = '#f0f0f0'; ctx.fillText(`⚡${score}`, 390, 24);
+            
+            // платформи
+            ctx.fillStyle = '#151b28';
+            ctx.strokeStyle = currentLevelData.platStroke;
+            ctx.lineWidth = 2;
+            for(let p of currentLevelData.platforms) {
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+                ctx.strokeRect(p.x, p.y, p.width, p.height);
+            }
+            
+            // ціль
+            pulse += 0.09;
+            let glow = Math.sin(pulse)*3;
+            ctx.fillStyle = '#00ccff';
+            ctx.fillRect(currentLevelData.target.x - glow/2, currentLevelData.target.y - glow/2, currentLevelData.target.width + glow, currentLevelData.target.height + glow);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = "bold 8px monospace";
+            ctx.fillText(currentLevelData.targetLabel, currentLevelData.target.x-4, currentLevelData.target.y-6);
+            
+            // вороги
+            for(let e of activeEnemies) {
+                ctx.fillStyle = '#ff3366';
+                ctx.fillRect(e.x, e.y, e.width, e.height);
+                ctx.fillStyle = '#111';
+                ctx.fillRect(e.dir===1 ? e.x+e.width-8 : e.x+4, e.y+8, 5, 5);
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(e.x+e.width/2-3, e.y-3, 6, 4);
+            }
+            // снаряди
+            ctx.fillStyle = '#7cff46';
+            for(let p of projectiles) ctx.fillRect(p.x, p.y, p.width, p.height);
+            
+            // Лисичка (піксель-арт)
+            if(player.invulnerable % 12 < 6) {
+                const foxMap = [
+                    ". . O . . . . . O . .", ". O O . . . . . O O .", ". O B B B B B B B O .", ". B B B B B B B B B .",
+                    ". B B S S S S S B B .", ". B G G G G G G G B .", ". B G G G G G G G B .", ". . S S F F F S S . .",
+                    ". . S S F F F S S . .", ". . J J N W N J J . .", ". J J J J J J J J . .", ". J N J J J J N J . .",
+                    ". J J J J J J J J . .", ". J J J J J J J J . .", ". . F F . . . F F . .", ". . F F . . . F F . .",
+                    ". J J . . . . J J . ."
+                ];
+                const wStep = player.width / 12;
+                const hStep = player.height / 17;
+                const colorMap = { '.':null,'O':'#b84300','F':'#e67e22','B':'#f1c40f','G':'#00f3ff','S':'#fdebd0','J':'#20232f','W':'#ffffff','N':'#39ff14'};
+                for(let r=0; r<foxMap.length; r++) {
+                    const row = foxMap[r].split(' ');
+                    for(let c=0; c<row.length; c++) {
+                        let actualCol = player.facingRight ? c : (row.length-1-c);
+                        const clr = colorMap[row[actualCol]];
+                        if(clr) {
+                            ctx.fillStyle = clr;
+                            ctx.fillRect(player.x + c*wStep, player.y + r*hStep, wStep+0.6, hStep+0.6);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function gameLoop() {
+            if(!gameActive) return;
+            if(!isQuizActive) updatePhysics();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Навішування кнопок
+        function attachButtons() {
+            const leftBtn = document.getElementById('btn-left');
+            const rightBtn = document.getElementById('btn-right');
+            const jumpBtn = document.getElementById('btn-jump');
+            const fireBtn = document.getElementById('btn-fire');
+            const setTouch = (btn, keyName, isPress) => {
+                if(!btn) return;
+                const handlerStart = (e) => { e.preventDefault(); if(!isQuizActive) keys[keyName] = isPress; };
+                const handlerEnd = (e) => { e.preventDefault(); if(!isQuizActive) keys[keyName] = !isPress; };
+                btn.addEventListener('touchstart', handlerStart, {passive:false});
+                btn.addEventListener('touchend', handlerEnd, {passive:false});
+                btn.addEventListener('touchcancel', handlerEnd);
+                btn.addEventListener('mousedown', handlerStart);
+                btn.addEventListener('mouseup', handlerEnd);
+                btn.addEventListener('mouseleave', handlerEnd);
+            };
+            setTouch(leftBtn, 'Left', true);
+            setTouch(rightBtn, 'Right', true);
+            setTouch(jumpBtn, 'Jump', true);
+            // вогонь окремо
+            fireBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if(gameActive && !isQuizActive) shoot(); });
+            fireBtn.addEventListener('mousedown', (e) => { e.preventDefault(); if(gameActive && !isQuizActive) shoot(); });
+            // клавіатура для тесту
+            window.addEventListener('keydown', (e) => {
+                if(e.code === 'ArrowRight') keys.Right = true;
+                if(e.code === 'ArrowLeft') keys.Left = true;
+                if(e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); if(!isQuizActive) keys.Jump = true; }
+                if(e.code === 'KeyF' && gameActive && !isQuizActive) shoot();
+            });
+            window.addEventListener('keyup', (e) => {
+                if(e.code === 'ArrowRight') keys.Right = false;
+                if(e.code === 'ArrowLeft') keys.Left = false;
+                if(e.code === 'Space' || e.code === 'ArrowUp') keys.Jump = false;
+            });
+        }
+        
+        function startGameFlow() {
+            if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            gameActive = true;
+            currentLevel = 1;
+            score = 0;
+            player.hp = 100;
+            loadLevel();
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('victory-screen').style.display = 'none';
+            isQuizActive = false;
+            gameLoop();
+        }
+        
+        document.getElementById('startBtn').addEventListener('click', () => startGameFlow());
+        document.getElementById('victoryRestartBtn').addEventListener('click', () => {
+            document.getElementById('victory-screen').style.display = 'none';
+            startGameFlow();
+        });
+        
+        attachButtons();
+        // попереднє завантаження аудіо контексту по жесту
+        document.body.addEventListener('touchstart', ()=>{
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        }, {once: true});
+    })();
+</script>
 </body>
 </html>
