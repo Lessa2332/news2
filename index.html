@@ -2,110 +2,125 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI TrackMaster - Спринт-Калібратор 168</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI TrackMaster Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    
     <style>
-        .warning-border { border-color: #ef4444; box-shadow: 0 0 15px #ef4444; }
-        .success-border { border-color: #22c55e; box-shadow: 0 0 15px #22c55e; }
+        /* Оптимізація тач-зон та затирання системних підсвічувань мобільних пристроїв */
+        input, button, select, textarea {
+            -webkit-tap-highlight-color: transparent;
+        }
+        .status-glow-success { box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); border-color: #22c55e; }
+        .status-glow-error { box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); border-color: #ef4444; }
+        .status-glow-idle { border-color: #475569; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+<body class="bg-slate-950 text-slate-50 antialiased select-none min-h-screen flex flex-col justify-between">
 
-    <div class="container mx-auto px-4 py-6 max-w-6xl">
+    <main class="w-full max-w-md md:max-w-6xl mx-auto px-4 py-4 md:py-6 flex-grow">
         
-        <header class="flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-4 mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-emerald-400 flex items-center gap-2">
-                    🏃‍♀️ AI TrackMaster <span class="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded-full">v1.0-MVP</span>
+        <header class="flex flex-col sm:flex-row justify-between items-center border-b border-slate-800 pb-4 mb-4 md:mb-6 gap-3">
+            <div class="text-center sm:text-left">
+                <h1 class="text-xl md:text-2xl font-black tracking-tight text-emerald-400 flex items-center justify-center sm:justify-start gap-2">
+                    🏃‍♀️ AI TRACKMASTER <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-mono">2026.1</span>
                 </h1>
-                <p class="text-sm text-slate-400">Онлайн-аналітика біомеханіки спринту (Базовий зріст: 168 см)</p>
+                <p class="text-xs md:text-sm text-slate-400 mt-0.5 font-medium">Калібратор біомеханіки спринту • Профіль: 168 см</p>
             </div>
-            <div class="mt-4 md:mt-0 flex gap-3">
-                <button id="calibrateBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
-                    ⚙️ Калібрувати (168 см)
+            
+            <div class="flex w-full sm:w-auto gap-2">
+                <button id="calibrateBtn" class="flex-1 sm:flex-initial bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm px-4 py-3 rounded-xl transition-all cursor-pointer shadow-md active:scale-98">
+                    ⚙️ Калібрувати
                 </button>
-                <button id="apiReportBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
-                    🤖 Звіт для ШІ
+                <button id="apiReportBtn" class="flex-1 sm:flex-initial bg-emerald-600 active:bg-emerald-700 text-white font-semibold text-sm px-4 py-3 rounded-xl transition-all cursor-pointer shadow-md active:scale-98">
+                    🤖 Звіт ШІ
                 </button>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
             
-            <div class="lg:col-span-7 flex flex-col items-center">
-                <div class="relative w-full aspect-video bg-black rounded-xl overflow-hidden border-2 border-slate-700" id="videoContainer">
-                    <video id="webcam" class="absolute top-0 left-0 w-full h-full object-cover hidden" autoplay playsinline></video>
+            <div class="lg:col-span-7 flex flex-col">
+                <div class="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl" id="videoWrapper">
+                    <video id="webcam" class="absolute top-0 left-0 w-full h-full object-cover hidden" autoplay playsinline muted></video>
                     <canvas id="output_canvas" class="absolute top-0 left-0 w-full h-full object-cover scale-x-[-1]"></canvas>
                     
-                    <div id="loading" class="absolute inset-0 flex flex-col justify-center items-center bg-slate-950/80 z-50">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-400 mb-2"></div>
-                        <p class="text-slate-300 text-sm">Ініціалізація нейромережі MediaPipe...</p>
+                    <div id="gestureOverlay" class="absolute inset-0 flex flex-col justify-center items-center bg-slate-950/95 z-50 p-6 text-center">
+                        <div id="loadingSpinner" class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-400 mb-4"></div>
+                        <h2 class="text-lg font-bold text-slate-100 mb-1">Система готова до запуску</h2>
+                        <p class="text-xs text-slate-400 max-w-xs mb-6">Для активації онлайн-камери та голосового супроводу натисніть кнопку нижче</p>
+                        <button id="startSessionBtn" class="w-full max-w-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-base py-4 px-6 rounded-xl transition-all shadow-lg shadow-emerald-500/20 cursor-pointer active:scale-95">
+                            🚀 АКТИВУВАТИ ТРЕНЕРА
+                        </button>
                     </div>
                 </div>
-                <p class="text-xs text-slate-500 mt-2 text-center">💡 Стань боком (у профіль) на відстані 2.5–3 метри, щоб ноутбук бачив тебе повністю.</p>
+                <div class="p-3 bg-slate-900/50 rounded-xl mt-2 border border-slate-800/60">
+                    <p class="text-[11px] text-slate-400 text-center leading-relaxed">💡 <span class="font-semibold text-slate-300">Інструкція:</span> Відійдіть на 2.5 метри, щоб ноутбук/телефон бачив вас у профіль з голови до ніг.</p>
+                </div>
             </div>
 
-            <div class="lg:col-span-5 flex flex-col gap-4">
+            <div class="lg:col-span-5 flex flex-col gap-3 md:gap-4">
                 
-                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                    <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Просторова метрика</span>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="text-sm">Поточний K-Factor:</span>
-                        <span id="kFactorVal" class="text-lg font-mono font-bold text-blue-400">Не відкалібровано</span>
-                    </div>
+                <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Просторова метрика:</span>
+                    <span id="kFactorVal" class="text-sm font-mono font-bold bg-slate-950 px-3 py-1.5 rounded-lg text-blue-400 border border-slate-800">Не відкалібровано</span>
                 </div>
 
-                <div id="cardArms" class="bg-slate-800 p-4 rounded-xl border-2 border-slate-700 transition-all">
-                    <div class="flex justify-between items-start">
+                <div id="cardArms" class="bg-slate-900 p-4 rounded-2xl border-2 status-glow-idle transition-all duration-300">
+                    <div class="flex justify-between items-center">
                         <div>
-                            <h3 class="text-md font-bold">💪 Кут у ліктьовому суглобі</h3>
-                            <p class="text-xs text-slate-400 mt-0.5">Спринтерський еталон: ~90° (Допуск: 75°-105°)</p>
+                            <h3 class="text-sm md:text-base font-bold text-slate-200">💪 Робота ліктьового суглоба</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">Спринтерська норма: 75° - 105°</p>
                         </div>
-                        <span id="statusArms" class="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">Очікування</span>
+                        <span id="statusArms" class="text-[10px] font-bold px-2 py-1 rounded bg-slate-800 text-slate-400 tracking-wide uppercase">Очікування</span>
                     </div>
-                    <div class="mt-4 flex items-baseline gap-2">
-                        <span id="angleVal" class="text-4xl font-extrabold font-mono text-slate-100">0°</span>
+                    <div class="mt-2">
+                        <span id="angleVal" class="text-3xl md:text-4xl font-black font-mono text-slate-50">0°</span>
                     </div>
                 </div>
 
-                <div id="cardKnee" class="bg-slate-800 p-4 rounded-xl border-2 border-slate-700 transition-all">
-                    <div class="flex justify-between items-start">
+                <div id="cardKnee" class="bg-slate-900 p-4 rounded-2xl border-2 status-glow-idle transition-all duration-300">
+                    <div class="flex justify-between items-center">
                         <div>
-                            <h3 class="text-md font-bold">🦵 Висота підйому коліна</h3>
-                            <p class="text-xs text-slate-400 mt-0.5">Ціль для 168 см: >92 см від лінії п'ят</p>
+                            <h3 class="text-sm md:text-base font-bold text-slate-200">🦵 Висота підйому коліна</h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">Цільова планка (168 см): > 92 см</p>
                         </div>
-                        <span id="statusKnee" class="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-300">Очікування</span>
+                        <span id="statusKnee" class="text-[10px] font-bold px-2 py-1 rounded bg-slate-800 text-slate-400 tracking-wide uppercase">Очікування</span>
                     </div>
-                    <div class="mt-4 flex items-baseline gap-2">
-                        <span id="kneeCmVal" class="text-4xl font-extrabold font-mono text-slate-100">0 <span class="text-lg font-normal text-slate-400">см</span></span>
+                    <div class="mt-2">
+                        <span id="kneeCmVal" class="text-3xl md:text-4xl font-black font-mono text-slate-50">0 <span class="text-xs md:text-sm font-medium text-slate-400">см</span></span>
                     </div>
                 </div>
 
-                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex-grow flex flex-col">
-                    <span class="text-xs text-slate-500 font-mono">LIVE_AI_FEEDBACK_STREAM:</span>
-                    <div id="liveFeedback" class="mt-2 text-sm text-slate-300 italic flex-grow">
-                        Камера готова. Будь ласка, натисніть "Калібрувати", коли стоятимете у повний зріст.
+                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex-grow flex flex-col justify-between min-h-[100px]">
+                    <span class="text-[10px] font-mono font-bold tracking-widest text-slate-500 uppercase">Голосовий помічник LIVE:</span>
+                    <div id="liveFeedback" class="mt-1 text-xs md:text-sm text-emerald-400/90 italic font-medium leading-relaxed">
+                        Очікування активації системи...
                     </div>
                 </div>
 
             </div>
         </div>
+    </main>
 
-        <div id="modal" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center hidden p-4">
-            <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-2xl w-full p-6 relative">
-                <h2 class="text-xl font-bold text-emerald-400 mb-2">Генератор біомеханічного запиту для ШІ (API)</h2>
-                <p class="text-xs text-slate-400 mb-4">Скопіюйте цей структурований текст для відправки в нейромережу (Gemini/ChatGPT):</p>
-                <textarea id="promptArea" class="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-300 focus:outline-none focus:border-emerald-500"></textarea>
-                <div class="mt-4 flex justify-end gap-3">
-                    <button id="closeModal" class="bg-slate-750 hover:bg-slate-750 text-slate-300 px-4 py-2 rounded-lg text-sm cursor-pointer">Закрити</button>
-                    <button id="copyPrompt" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer">Копіювати текст</button>
-                </div>
+    <footer class="w-full text-center py-4 border-t border-slate-900 text-[10px] font-mono text-slate-600 mt-6">
+        AI TrackMaster 2026 • Розроблено для високоточного аналізу рухових стереотипів
+    </footer>
+
+    <div id="modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-5 md:p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <h2 class="text-base md:text-lg font-bold text-emerald-400 flex items-center gap-2">🤖 Біомеханічний дата-пакет для ШІ</h2>
+            <p class="text-[11px] text-slate-400 mt-1 mb-3">Скопіюйте згенеровану телеметрію та надішліть її в API або інтерфейс мовної моделі:</p>
+            
+            <textarea id="promptArea" class="w-full h-48 md:h-60 bg-slate-950 border border-slate-800 rounded-xl p-3 text-[11px] font-mono text-slate-300 focus:outline-none focus:border-emerald-500/50 resize-none" readonly></textarea>
+            
+            <div class="mt-4 flex gap-2 justify-end">
+                <button id="closeModal" class="bg-slate-800 active:bg-slate-700 text-slate-300 text-xs font-semibold px-4 py-3 rounded-xl cursor-pointer active:scale-98">Закрити</button>
+                <button id="copyPrompt" class="bg-emerald-600 active:bg-emerald-700 text-white text-xs font-semibold px-4 py-3 rounded-xl cursor-pointer active:scale-98">Копіювати дані</button>
             </div>
         </div>
-
     </div>
 
     <script>
@@ -113,11 +128,11 @@
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         
-        // Змінні біомеханіки
-        let kFactor = null; // см на 1 піксель
+        let kFactor = null;
         const athleteHeightCm = 168;
-        
-        // Історія для фінального звіту
+        let lastSpokenTime = 0;
+        let isAudioUnlocked = false;
+
         let sessionMetrics = {
             maxKneeHeight: 0,
             anglesRecorded: [],
@@ -125,7 +140,26 @@
             errorsCount: 0
         };
 
-        // Функція розрахунку кута між 3 точками (A, B, C) де B - вершина кута
+        // Функція безпечної мобільної озвучки через Web Speech API
+        function speakLive(text) {
+            if (!isAudioUnlocked || !('speechSynthesis' in window)) return;
+            
+            const now = Date.now();
+            // Дебаунс 3 секунди - золотий стандарт спортивного UX 2026
+            if (now - lastSpokenTime > 3000) {
+                window.speechSynthesis.cancel(); // Скидаємо попередній потік, що завис
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'uk-UA';
+                utterance.rate = 1.05; // Трохи динамічніший темп для спорту
+                utterance.pitch = 1.0;
+                
+                window.speechSynthesis.speak(utterance);
+                lastSpokenTime = now;
+            }
+        }
+
+        // Обчислення кута між трьома точками скелета
         function calculateAngle(A, B, C) {
             let radians = Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x);
             let angle = Math.abs((radians * 180.0) / Math.PI);
@@ -133,12 +167,8 @@
             return Math.round(angle);
         }
 
-        // Обробка результатів MediaPipe Pose
+        // Обробка кадрів комп'ютерного зору MediaPipe Pose
         function onResults(results) {
-            // Приховуємо вікно завантаження при перших даних
-            document.getElementById('loading').classList.add('hidden');
-            
-            // Задаємо внутрішній розмір канвасу під розмір відео
             if (canvasElement.width !== videoElement.videoWidth) {
                 canvasElement.width = videoElement.videoWidth;
                 canvasElement.height = videoElement.videoHeight;
@@ -146,15 +176,12 @@
 
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // Малюємо поточний кадр з камери (віддзеркалений для зручності користувача)
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
             if (results.poseLandmarks) {
                 sessionMetrics.totalFramesAnalyzed++;
                 
-                // Витягуємо ключові точки для аналізу (профіль, права або ліва сторона)
-                // Для простоти беремо ліву сторону ( Shoulder: 11, Elbow: 13, Wrist: 15, Hip: 23, Knee: 25, Ankle: 27, Heel: 29)
+                // Витягуємо ключові вузли лівої сторони тіла у профілі
                 const shoulder = results.poseLandmarks[11];
                 const elbow = results.poseLandmarks[13];
                 const wrist = results.poseLandmarks[15];
@@ -163,32 +190,32 @@
                 const heel = results.poseLandmarks[29];
                 const nose = results.poseLandmarks[0];
 
-                // --- 1. ВІЗУАЛІЗАЦІЯ СКЕЛЕТУ (Прямо на Canvas) ---
-                const pointsToDraw = [shoulder, elbow, wrist, hip, knee, heel];
-                pointsToDraw.forEach(pt => {
-                    if(pt) {
+                // Орієнтири для рендерингу цифрового скелета
+                const nodes = [shoulder, elbow, wrist, hip, knee, heel];
+                nodes.forEach(node => {
+                    if (node) {
                         canvasCtx.beginPath();
-                        canvasCtx.arc(pt.x * canvasElement.width, pt.y * canvasElement.height, 6, 0, 2 * Math.PI);
-                        canvasCtx.fillStyle = '#10b981';
+                        canvasCtx.arc(node.x * canvasElement.width, node.y * canvasElement.height, 5, 0, 2 * Math.PI);
+                        canvasCtx.fillStyle = '#34d399';
                         canvasCtx.fill();
                     }
                 });
 
-                // --- 2. МАТЕМАТИЧНИЙ АНАЛІЗ БІОМЕХАНІКИ ---
-                
-                // Логіка динамічного калібрування по кнопці
+                // Динамічний тріггер калібрування за запитом
                 document.getElementById('calibrateBtn').onclick = () => {
                     if (nose && heel) {
                         const pixelHeight = Math.abs(heel.y - nose.y) * canvasElement.height;
                         kFactor = athleteHeightCm / pixelHeight;
                         document.getElementById('kFactorVal').innerText = kFactor.toFixed(3) + " см/px";
-                        document.getElementById('liveFeedback').innerText = "Калібрування успішне! Система адаптована під 168 см.";
+                        document.getElementById('liveFeedback').innerText = "Калібрування виконано під зріст 168 см. Починайте вправу.";
+                        speakLive("Калібрування виконано успішно. Система адаптована під ваш зріст.");
                     } else {
-                        document.getElementById('liveFeedback').innerText = "Помилка калібрування: переконайтеся, що вас видно від голови до п'ят.";
+                        document.getElementById('liveFeedback').innerText = "Помилка: Скелет має бути видно повністю (від маківки до п'ят).";
+                        speakLive("Помилка калібрування. Станьте далі від камери.");
                     }
                 };
 
-                // Розрахунок кута рук
+                // Аналіз кутових траєкторій рук
                 if (shoulder && elbow && wrist) {
                     const armAngle = calculateAngle(shoulder, elbow, wrist);
                     document.getElementById('angleVal').innerText = armAngle + "°";
@@ -198,26 +225,26 @@
                     const status = document.getElementById('statusArms');
                     
                     if (armAngle >= 75 && armAngle <= 105) {
-                        card.className = "bg-slate-800 p-4 rounded-xl border-2 success-border transition-all";
-                        status.className = "text-xs px-2 py-0.5 rounded bg-green-950 text-green-400";
+                        card.className = "bg-slate-900 p-4 rounded-2xl border-2 status-glow-success transition-all duration-300";
+                        status.className = "text-[10px] font-bold px-2 py-1 rounded bg-green-950 text-green-400 tracking-wide uppercase";
                         status.innerText = "Норма";
                     } else {
-                        card.className = "bg-slate-800 p-4 rounded-xl border-2 warning-border transition-all";
-                        status.className = "text-xs px-2 py-0.5 rounded bg-red-950 text-red-400";
+                        card.className = "bg-slate-900 p-4 rounded-2xl border-2 status-glow-error transition-all duration-300";
+                        status.className = "text-[10px] font-bold px-2 py-1 rounded bg-red-950 text-red-400 tracking-wide uppercase";
                         status.innerText = "Помилка кута";
                         sessionMetrics.errorsCount++;
-                        document.getElementById('liveFeedback').innerText = "⚠️ Фіксуй лікоть ближче до 90 градусів! Не розпрямляй руки.";
+                        document.getElementById('liveFeedback').innerText = "⚠️ Кут ліктя вийшов за межі норми! Утримуй 90 градусів.";
+                        speakLive("Фіксуй лікоть!");
                     }
                 }
 
-                // Розрахунок висоти підйому коліна у сантиметрах
+                // Визначення лінійної амплітуди коліна через K-коефіцієнт
                 if (kFactor && knee && heel) {
-                    // Рахуємо вертикальну відстань в пікселях між п'яткою та коліном
                     const kneeHeightPx = Math.abs(heel.y - knee.y) * canvasElement.height;
                     const kneeHeightCm = Math.round(kneeHeightPx * kFactor);
                     
-                    document.getElementById('kneeCmVal').innerHTML = `${kneeHeightCm} <span class="text-lg font-normal text-slate-400">см</span>`;
-                    if(kneeHeightCm > sessionMetrics.maxKneeHeight) {
+                    document.getElementById('kneeCmVal').innerHTML = `${kneeHeightCm} <span class="text-xs md:text-sm font-medium text-slate-400">см</span>`;
+                    if (kneeHeightCm > sessionMetrics.maxKneeHeight) {
                         sessionMetrics.maxKneeHeight = kneeHeightCm;
                     }
 
@@ -225,21 +252,22 @@
                     const statusKnee = document.getElementById('statusKnee');
 
                     if (kneeHeightCm >= 92) {
-                        cardKnee.className = "bg-slate-800 p-4 rounded-xl border-2 success-border transition-all";
-                        statusKnee.className = "text-xs px-2 py-0.5 rounded bg-green-950 text-green-400";
-                        statusKnee.innerText = "Ідеальна висота";
+                        cardKnee.className = "bg-slate-900 p-4 rounded-2xl border-2 status-glow-success transition-all duration-300";
+                        statusKnee.className = "text-[10px] font-bold px-2 py-1 rounded bg-green-950 text-green-400 tracking-wide uppercase";
+                        statusKnee.innerText = "Ідеально";
                     } else if (kneeHeightCm > 40 && kneeHeightCm < 92) {
-                        cardKnee.className = "bg-slate-800 p-4 rounded-xl border-2 warning-border transition-all";
-                        statusKnee.className = "text-xs px-2 py-0.5 rounded bg-red-950 text-red-400";
-                        statusKnee.innerText = "Занизько";
-                        document.getElementById('liveFeedback').innerText = "🔥 Вище стегно! Тягни коліно паралельно підлозі.";
+                        cardKnee.className = "bg-slate-900 p-4 rounded-2xl border-2 status-glow-error transition-all duration-300";
+                        statusKnee.className = "text-[10px] font-bold px-2 py-1 rounded bg-red-950 text-red-400 tracking-wide uppercase";
+                        statusKnee.innerText = "Низько";
+                        document.getElementById('liveFeedback').innerText = "🔥 Піднімай стегно вище, тримай паралель!";
+                        speakLive("Вище стегно!");
                     }
                 }
             }
             canvasCtx.restore();
         }
 
-        // Налаштування MediaPipe Pose
+        // Конфігурація MediaPipe Pose моделі
         const pose = new Pose({locateFile: (file) => {
             return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
         }});
@@ -247,13 +275,11 @@
         pose.setOptions({
             modelComplexity: 1,
             smoothLandmarks: true,
-            enableSegmentation: false,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.6
         });
         pose.onResults(onResults);
 
-        // Запуск потоку камери
         const camera = new Camera(videoElement, {
             onFrame: async () => {
                 await pose.send({image: videoElement});
@@ -261,38 +287,45 @@
             width: 640,
             height: 360
         });
-        camera.start();
 
-        // --- ЛОГІКА МОДАЛЬНОГО ВІКНА ТА СИНТЕЗУ ШІ-ПРОМПТУ ---
+        // Ініціалізація аудіоконтексту за першим кліком (iOS/Android Гайдлайн)
+        document.getElementById('startSessionBtn').onclick = () => {
+            isAudioUnlocked = true;
+            document.getElementById('gestureOverlay').classList.add('hidden');
+            document.getElementById('liveFeedback').innerText = "Система активна. Станьте у повний зріст і натисніть 'Калібрувати'.";
+            
+            // Запуск камери після жесту користувача
+            camera.start();
+            speakLive("Електронний тренер активований. Бажаю успішного тренування!");
+        };
+
+        // Логіка генерації фінального текстового пакету для ШІ (Генератор промптів)
         const modal = document.getElementById('modal');
         const promptArea = document.getElementById('promptArea');
 
         document.getElementById('apiReportBtn').onclick = () => {
-            // Обчислюємо середній кут рук
             const sum = sessionMetrics.anglesRecorded.reduce((a, b) => a + b, 0);
             const avgAngle = sum ? Math.round(sum / sessionMetrics.anglesRecorded.length) : 0;
             
-            // Формуємо структурований промпт для ШІ-моделі
-            const promptText = `Ти — професійний емпатичний тренер з легкої атлетики для підлітків. Сформуй персоналізований, мотивуючий аналіз тренування для дівчинки 13 років (зріст 168 см), яка виконувала вправу "Високе піднімання стегна" перед камерою ноутбука.
-    
-Ось телеметрія її біомеханіки, зібрана системою комп'ютерного зору MediaPipe:
-- Фізичний зріст: 168 см.
-- Всього проаналізовано кадрів руху: ${sessionMetrics.totalFramesAnalyzed}.
-- Максимальна зафіксована висота підйому коліна: ${sessionMetrics.maxKneeHeight} см (Цільова норма для її зросту: >92 см).
-- Середній кут у ліктьовому суглобі при замаху рук: ${avgAngle}° (Норма: ~90°).
-- Кількість виявлених біомеханічних помилок (завал коліна або розпрямлення ліктя): ${sessionMetrics.errorsCount}.
+            promptArea.value = `Ти — експертний, емпатичний тренер-аналітик з біомеханіки спринту. Сформуй професійний зворотний зв'язок для юної спортсменки (13 років, зріст 168 см) за підсумками її домашнього тренування на основі телеметрії комп'ютерного зору MediaPipe:
 
-Напиши розбір у дружньому, надихаючому стилі "старшого наставника". Зверни увагу на її сильні сторони, м'яко вкажи на помилки у кутах рук та поясни, як правильна біомеханіка допоможе їй покращити результат у бігу на 60 метрів та захистить від травм. Не використовуй сухі звіти — говори як жива людина.`;
+МЕТРИКИ СЕСІЇ:
+- Зріст атлетки: 168 см
+- Проаналізовано фаз руху: ${sessionMetrics.totalFramesAnalyzed} кадрів
+- Піковий винос стегна (коліна): ${sessionMetrics.maxKneeHeight} см (Цільова норма для її антропометрії: >92 см)
+- Середній інтегральний кут у лікті: ${avgAngle}° (Еталон спринтера: ~90°)
+- Кількість критичних відхилень від рухового стандарту: ${sessionMetrics.errorsCount}
 
-            promptArea.value = promptText;
+Напиши детальний розбір у надихаючому стилі, підкресли досягнення амплітуди, розшифруй помилки у кутах рук та поясни підлітку простими словами, як стабілізація цих параметрів допоможе покращити її час на дистанції 60 метрів і вбереже коліна від перевантажень.`;
+
             modal.classList.remove('hidden');
         };
 
         document.getElementById('closeModal').onclick = () => modal.classList.add('hidden');
         document.getElementById('copyPrompt').onclick = () => {
             promptArea.select();
-            document.execCommand('copy');
-            alert('Текст промпту успішно скопійовано! Вставте його у вікно чату вашої AI-моделі.');
+            navigator.clipboard.writeText(promptArea.value);
+            alert('Дані успішно скопійовано! Надішліть їх вашому ШІ-асистенту.');
         };
     </script>
 </body>
