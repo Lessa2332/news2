@@ -335,10 +335,37 @@
         pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
         pose.onResults(onResults);
 
-        const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 1280, height: 720 });
+                // 1. Додаємо facingMode: 'user' для фронтальної камери
+        const camera = new Camera(videoElement, { 
+            onFrame: async () => { await pose.send({image: videoElement}); }, 
+            width: 1280, 
+            height: 720,
+            facingMode: 'user' // <-- Тільки фронтальна (селфі) камера
+        });
 
         document.getElementById('startBtn').onclick = () => {
             document.getElementById('startBtn').classList.add('hidden');
+            dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
+            
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            audioCtx.resume();
+            setUI("⏳", "Запуск камери...", "Надайте дозвіл у браузері", false);
+            
+            // 2. Додаємо обробку помилок (catch), щоб знати, якщо Chrome заблокував камеру
+            camera.start().then(() => {
+                appState = 'ASK_HEIGHT';
+                setTimeout(() => {
+                    speakWait("Привіт! Який твій зріст у сантиметрах? Введіть на екрані або скажіть цифру після сигналу.", () => {
+                        playSound('beep'); setTimeout(listenForHeight, 300);
+                    });
+                }, 1000);
+            }).catch((err) => {
+                console.error("Помилка камери: ", err);
+                setUI("❌", "Камера заблокована", "Відкрийте сайт через HTTPS", false);
+                speakLive("Не вдалося підключити камеру. Перевірте дозволи браузера.");
+            });
+        };
+document.getElementById('startBtn').classList.add('hidden');
             dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
             
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
