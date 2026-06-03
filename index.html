@@ -1,447 +1,1055 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI TrackMaster: Smart Mirror</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    
-    <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
-        .glass-panel { background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        @keyframes pulse-mic {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-        .listening { animation: pulse-mic 1.5s infinite; border-color: #10b981; }
-        .victory-flash { animation: flash-green 1s ease-out forwards; }
-        @keyframes flash-green { 0% { background-color: rgba(16, 185, 129, 0.8); } 100% { background-color: rgba(16, 185, 129, 0); } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TrackMaster PRO — Olympic Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #F0D080;
+    --gold-dim: rgba(201,168,76,0.18);
+    --green: #00E5A0;
+    --red: #FF4D4D;
+    --bg: #080C10;
+    --surface: #0D1117;
+    --surface2: #131A22;
+    --border: rgba(255,255,255,0.07);
+    --text: #F0EDE6;
+    --muted: #7A8694;
+    --font-display: 'Barlow Condensed', sans-serif;
+    --font-body: 'Barlow', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
+
+  /* === CANVAS LAYER === */
+  #webcam { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+  #output_canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); z-index: 0; }
+
+  /* === OVERLAY VIGNETTE === */
+  .vignette {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,0.7) 100%);
+  }
+
+  /* === SCANLINE TEXTURE === */
+  .scanlines {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.035;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,1) 2px, rgba(255,255,255,1) 3px);
+  }
+
+  /* === HUD LAYOUT === */
+  #hud {
+    position: absolute; inset: 0; z-index: 10;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 1fr;
+    padding: 20px;
+    gap: 0;
+    pointer-events: none;
+  }
+  #hud > * { pointer-events: auto; }
+
+  /* === TOP BAR === */
+  #topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+  }
+  .logo-block { display: flex; flex-direction: column; }
+  .logo-title {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 4vw, 34px);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .logo-sub {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  .top-metrics {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .metric-pill {
+    background: rgba(8,12,16,0.7);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    text-align: center;
+    display: none;
+  }
+  .metric-pill.visible { display: block; }
+  .metric-pill__label {
+    font-family: var(--font-display);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .metric-pill__value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+  }
+  .metric-pill__value.accent { color: var(--gold); }
+
+  /* === TIMER RING === */
+  #timerRing {
+    position: relative;
+    width: 80px; height: 80px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #timerRing.visible { display: flex; }
+  #timerRing svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  #timerRing .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 3; }
+  #timerRing .ring-fill { fill: none; stroke: var(--gold); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 220; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+  #timerRing .ring-text {
+    font-family: var(--font-display);
+    font-size: 26px; font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    position: relative; z-index: 1;
+  }
+  #timerRing .ring-label {
+    font-size: 9px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--muted);
+    position: relative; z-index: 1;
+  }
+
+  /* === CENTER PANEL === */
+  #centerPanel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* === START SCREEN === */
+  #startScreen { text-align: center; }
+  #startBtn {
+    font-family: var(--font-display);
+    font-size: clamp(18px, 3vw, 26px);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #080C10;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
+    border: none;
+    border-radius: 14px;
+    padding: 18px 48px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 40px rgba(201,168,76,0.3), 0 4px 24px rgba(0,0,0,0.5);
+  }
+  #startBtn:hover { transform: scale(1.04); box-shadow: 0 0 60px rgba(201,168,76,0.5), 0 4px 24px rgba(0,0,0,0.5); }
+  #startBtn:active { transform: scale(0.97); }
+  .start-tagline {
+    font-family: var(--font-display);
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 14px;
+  }
+
+  /* === DIALOG BOX === */
+  #dialogBox {
+    background: rgba(13,17,23,0.85);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px 36px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    display: none;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 0 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  #dialogBox.visible { display: block; }
+  .dialog-icon {
+    width: 64px; height: 64px;
+    margin: 0 auto 16px;
+    background: var(--surface2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    border: 2px solid var(--border);
+    transition: border-color 0.3s;
+  }
+  .dialog-icon.listening {
+    border-color: var(--green);
+    box-shadow: 0 0 0 0 rgba(0,229,160,0.6);
+    animation: pulse-ring 1.5s infinite;
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(0,229,160,0.6); }
+    70% { box-shadow: 0 0 0 16px rgba(0,229,160,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,229,160,0); }
+  }
+  .dialog-title {
+    font-family: var(--font-display);
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .dialog-sub {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .height-input-row {
+    display: flex; gap: 10px; justify-content: center; margin-top: 20px;
+    display: none;
+  }
+  .height-input-row.visible { display: flex; }
+  #manualHeight {
+    background: var(--surface2);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 12px 16px;
+    width: 130px; text-align: center;
+    font-family: var(--font-display); font-size: 20px; font-weight: 700;
+    outline: none; transition: border-color 0.2s;
+  }
+  #manualHeight:focus { border-color: var(--gold); }
+  #manualHeight.error { border-color: var(--red); }
+  #confirmHeightBtn {
+    background: var(--gold);
+    color: #080C10;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-family: var(--font-display); font-size: 18px; font-weight: 900;
+    letter-spacing: 0.1em;
+    cursor: pointer; transition: transform 0.1s, background 0.2s;
+  }
+  #confirmHeightBtn:hover { background: var(--gold-light); }
+  #confirmHeightBtn:active { transform: scale(0.95); }
+  #noVoiceMsg {
+    font-size: 11px; color: #E8A83A; margin-top: 12px; display: none;
+  }
+
+  /* === LIVE EXERCISE HUD === */
+  #exerciseHud { display: none; width: 100%; }
+  #exerciseHud.visible { display: block; }
+
+  /* === KNEE HEIGHT METER === */
+  .knee-display {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .knee-number {
+    font-family: var(--font-display);
+    font-size: clamp(64px, 14vw, 120px);
+    font-weight: 900;
+    line-height: 0.9;
+    color: var(--text);
+    transition: color 0.2s;
+    text-shadow: 0 0 40px rgba(0,229,160,0.15);
+  }
+  .knee-number.good { color: var(--green); text-shadow: 0 0 40px rgba(0,229,160,0.3); }
+  .knee-number.warn { color: var(--gold); text-shadow: 0 0 40px rgba(201,168,76,0.3); }
+  .knee-unit {
+    font-family: var(--font-display);
+    font-size: 24px; font-weight: 600; color: var(--muted);
+    padding-bottom: 12px;
+  }
+  .target-label {
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .target-label span { color: var(--gold); font-weight: 700; }
+
+  /* === PROGRESS BAR === */
+  .progress-bar-wrap {
+    height: 4px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    border-radius: 2px;
+    transition: width 1s linear;
+  }
+
+  /* === REP COUNTER === */
+  .rep-bar {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+  .rep-item { text-align: center; }
+  .rep-item__val {
+    font-family: var(--font-display);
+    font-size: 32px; font-weight: 900;
+    color: var(--text);
+  }
+  .rep-item__val.accent { color: var(--green); }
+  .rep-item__lbl {
+    font-family: var(--font-display);
+    font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  /* === BOTTOM PANEL === */
+  #bottomPanel {
+    width: 100%;
+  }
+  #livePanel {
+    background: rgba(8,12,16,0.8);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: none;
+  }
+  #livePanel.visible { display: block; }
+
+  /* === PHASE BADGE === */
+  .phase-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 12px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+  .phase-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .phase-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .phase-dot.gold { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+
+  /* === REPORT SCREEN === */
+  #reportScreen {
+    background: rgba(13,17,23,0.92);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    display: none;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  #reportScreen.visible { display: block; }
+  .report-title {
+    font-family: var(--font-display);
+    font-size: 28px; font-weight: 900; letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .report-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 20px 0;
+  }
+  .report-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 10px;
+  }
+  .report-card__val {
+    font-family: var(--font-display);
+    font-size: 36px; font-weight: 900;
+    color: var(--text);
+  }
+  .report-card__val.gold { color: var(--gold); }
+  .report-card__val.green { color: var(--green); }
+  .report-card__val.red { color: var(--red); }
+  .report-card__lbl {
+    font-family: var(--font-display);
+    font-size: 9px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--muted);
+    margin-top: 2px;
+  }
+  .gesture-cue {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text);
+    animation: glow-pulse 2s infinite;
+  }
+  .gesture-cue.saved {
+    background: rgba(0,229,160,0.08);
+    border-color: rgba(0,229,160,0.4);
+    animation: none;
+  }
+  @keyframes glow-pulse {
+    0%, 100% { border-color: var(--border); }
+    50% { border-color: rgba(201,168,76,0.5); box-shadow: 0 0 20px rgba(201,168,76,0.1); }
+  }
+  #restartBtn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--muted);
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-family: var(--font-display); font-size: 16px; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.2s;
+  }
+  #restartBtn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* === VICTORY FLASH === */
+  #victoryOverlay {
+    position: absolute; inset: 0; z-index: 20;
+    pointer-events: none; display: none;
+  }
+  .flash-anim { animation: flash 0.8s ease-out forwards; }
+  @keyframes flash {
+    0% { background: rgba(0,229,160,0.35); }
+    100% { background: transparent; }
+  }
+
+  /* === FEEDBACK TOAST === */
+  #toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 15;
+    pointer-events: none;
+    display: none;
+  }
+  #toast.visible { display: block; animation: toast-fade 2s ease-out forwards; }
+  @keyframes toast-fade {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+    15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    70% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
+  }
+  .toast-text {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 6vw, 56px);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--red);
+    text-shadow: 0 0 30px rgba(255,77,77,0.5);
+  }
+  .toast-text.good-fb { color: var(--green); text-shadow: 0 0 30px rgba(0,229,160,0.5); }
+
+  /* === LOADING INDICATOR === */
+  #loadingBar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2px;
+    background: var(--gold);
+    width: 0%;
+    z-index: 30;
+    transition: width 0.5s ease;
+  }
+
+  /* Responsive */
+  @media (max-height: 600px) {
+    #hud { padding: 10px; }
+    .dialog-title { font-size: 18px; }
+    #dialogBox { padding: 20px 24px; }
+  }
+</style>
 </head>
-<body class="text-slate-50 antialiased select-none font-sans relative">
+<body>
 
-    <video id="webcam" class="absolute inset-0 w-full h-full object-cover hidden" autoplay playsinline muted></video>
-    <canvas id="output_canvas" class="absolute inset-0 w-full h-full object-cover scale-x-[-1] z-0"></canvas>
-    
-    <div id="victoryOverlay" class="absolute inset-0 z-20 pointer-events-none hidden"></div>
+<video id="webcam" autoplay playsinline muted></video>
+<canvas id="output_canvas"></canvas>
+<div class="vignette"></div>
+<div class="scanlines"></div>
+<div id="victoryOverlay"></div>
+<div id="toast"><div class="toast-text" id="toastText"></div></div>
+<div id="loadingBar"></div>
 
-    <div class="absolute inset-0 z-10 flex flex-col justify-between pointer-events-none p-4 pb-8 md:p-8">
-        
-        <header class="flex justify-between items-start pointer-events-auto w-full max-w-4xl mx-auto">
-            <div class="glass-panel px-4 py-2 rounded-2xl border border-slate-700/50 flex flex-col">
-                <h1 class="text-lg md:text-xl font-black text-emerald-400 tracking-tight">TRACKMASTER</h1>
-                <span id="phaseIndicator" class="text-[10px] font-mono text-slate-300 uppercase tracking-widest mt-0.5">Етап: Ініціалізація</span>
-            </div>
-            
-            <div id="miniMetrics" class="glass-panel px-4 py-2 rounded-2xl border border-slate-700/50 flex gap-4 hidden">
-                <div class="text-center">
-                    <p class="text-[10px] text-slate-400 uppercase">Зріст</p>
-                    <p id="uiHeight" class="text-sm font-bold">-- см</p>
-                </div>
-                <div class="text-center">
-                    <p class="text-[10px] text-slate-400 uppercase">Час</p>
-                    <p id="uiTimer" class="text-sm font-bold text-emerald-400">00:00</p>
-                </div>
-            </div>
-        </header>
+<div id="hud">
+  <!-- TOP BAR -->
+  <div id="topBar">
+    <div class="logo-block">
+      <div class="logo-title">TrackMaster</div>
+      <div class="logo-sub">Olympic Edition</div>
+      <div class="phase-badge" id="phaseBadge">
+        <div class="phase-dot" id="phaseDot"></div>
+        <span id="phaseText">Ініціалізація</span>
+      </div>
+    </div>
+    <div class="top-metrics" id="topMetrics">
+      <div class="metric-pill" id="pillHeight">
+        <div class="metric-pill__label">Зріст</div>
+        <div class="metric-pill__value accent" id="uiHeight">— см</div>
+      </div>
+      <div id="timerRing">
+        <svg viewBox="0 0 80 80"><circle class="ring-bg" cx="40" cy="40" r="35"/><circle class="ring-fill" id="ringFill" cx="40" cy="40" r="35"/></svg>
+        <div class="ring-text" id="uiTimer">30</div>
+        <div class="ring-label">сек</div>
+      </div>
+    </div>
+  </div>
 
-        <main class="flex-grow flex flex-col items-center justify-center pointer-events-auto">
-            
-            <button id="startBtn" class="bg-emerald-500 text-slate-950 font-black text-xl py-5 px-10 rounded-3xl shadow-[0_0_40px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer">
-                АКТИВУВАТИ ДЗЕРКАЛО
-            </button>
-
-            <div id="dialogBox" class="glass-panel max-w-2xl w-full p-6 md:p-8 rounded-3xl border border-slate-600/50 text-center shadow-2xl transition-all duration-500 opacity-0 scale-95 hidden">
-                <div id="statusIcon" class="w-16 h-16 mx-auto bg-slate-800 rounded-full flex items-center justify-center text-2xl mb-4 border-2 border-slate-600 transition-colors">🤖</div>
-                <h2 id="aiSubtitle" class="text-2xl md:text-3xl font-bold leading-tight mb-2">Підготовка до запуску...</h2>
-                <p id="aiSubtext" class="text-sm text-slate-300">Зачекайте на завантаження нейромережі</p>
-                
-                <div id="heightInputGroup" class="mt-6 flex gap-2 justify-center hidden opacity-0 transition-opacity duration-500">
-                    <input type="number" id="manualHeight" placeholder="Або введіть: 168" class="bg-slate-950/80 border border-slate-600 text-white rounded-xl px-4 py-3 w-40 text-center text-sm focus:outline-none focus:border-emerald-500 shadow-inner">
-                    <button id="confirmHeightBtn" class="bg-emerald-600 hover:bg-emerald-500 text-slate-50 px-6 py-3 rounded-xl font-bold active:scale-95 transition-all shadow-lg cursor-pointer">OK</button>
-                </div>
-                <div id="noVoiceMessage" class="text-xs text-amber-400 mt-4 hidden">⚠️ Ваш браузер не підтримує голосове введення. Використовуйте клавіатуру.</div>
-            </div>
-
-            <div id="reportBox" class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl border border-emerald-500/50 text-center shadow-2xl hidden">
-                <h2 class="text-2xl font-black text-emerald-400 mb-4">🏁 Тренування завершено!</h2>
-                <div class="flex justify-around mb-6 text-center">
-                    <div><p class="text-[10px] text-slate-400 uppercase">Рухів</p><p id="repCount" class="text-3xl font-bold">0</p></div>
-                    <div><p class="text-[10px] text-slate-400 uppercase">Макс. Висота</p><p id="repMaxHeight" class="text-3xl font-bold text-emerald-400">0</p></div>
-                </div>
-                <div id="gestureInstruction" class="bg-slate-800/80 p-4 rounded-xl border border-slate-600 animate-pulse">
-                    <p class="text-sm font-bold text-slate-200">🙌 Підніми дві руки вгору, щоб зберегти результат у базу!</p>
-                </div>
-                <button id="restartBtn" class="mt-6 bg-slate-700 hover:bg-slate-600 text-white py-3 px-8 rounded-xl font-bold transition-all cursor-pointer">Нове тренування</button>
-            </div>
-
-            <div id="liveStatsBox" class="w-full max-w-sm mt-auto glass-panel p-4 rounded-3xl border border-slate-600/50 hidden">
-                <div class="flex justify-between items-end">
-                    <div>
-                        <p class="text-xs text-slate-400">Висота коліна</p>
-                        <p id="liveKnee" class="text-5xl font-black font-mono">0<span class="text-lg text-slate-400">см</span></p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs text-slate-400">Норма для вас</p>
-                        <p id="liveTarget" class="text-lg font-bold text-emerald-400">> 90 см</p>
-                    </div>
-                </div>
-            </div>
-        </main>
+  <!-- CENTER -->
+  <div id="centerPanel">
+    <!-- Start -->
+    <div id="startScreen">
+      <button id="startBtn">АКТИВУВАТИ</button>
+      <div class="start-tagline">AI Motion Analysis · Precision Tracking</div>
     </div>
 
-    <script>
-        // ⚠️ Замініть на URL вашого Google Apps Script веб-додатку
-        const GOOGLE_SHEETS_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE";
+    <!-- Dialog -->
+    <div id="dialogBox">
+      <div class="dialog-icon" id="dialogIcon">🤖</div>
+      <div class="dialog-title" id="dialogTitle">Підготовка...</div>
+      <div class="dialog-sub" id="dialogSub">Завантаження нейромережі</div>
+      <div class="height-input-row" id="heightRow">
+        <input type="number" id="manualHeight" placeholder="168" min="100" max="230">
+        <button id="confirmHeightBtn">OK</button>
+      </div>
+      <div id="noVoiceMsg">⚠️ Голос недоступний — введіть вручну</div>
+    </div>
 
-        const videoElement = document.getElementById('webcam');
-        const canvasElement = document.getElementById('output_canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-        const dialogBox = document.getElementById('dialogBox');
-        
-        let appState = 'INIT'; // INIT, ASK_HEIGHT, CALIBRATE, EXPLAIN, EXERCISE, DONE, SAVED
-        let userHeightCm = null;
-        let kFactor = null;
-        let audioCtx = null;
-        let lastSpokenTime = 0;
-        let exerciseTimer = 0;
-        let speechRecognizer = null;
-        let timerInterval = null;
-        let hasSaved = false;
-        
-        let metrics = { reps: 0, maxKneeHeight: 0, errors: 0, isKneeUp: false };
+    <!-- Live exercise -->
+    <div id="exerciseHud">
+      <div class="knee-display">
+        <div class="knee-number" id="kneeNum">0</div>
+        <div class="knee-unit">см</div>
+      </div>
+      <div class="target-label">Ціль: підняти коліно вище <span id="targetLabel">90</span> см</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressBar" style="width:100%"></div>
+      </div>
+      <div class="rep-bar">
+        <div class="rep-item"><div class="rep-item__val accent" id="livReps">0</div><div class="rep-item__lbl">Рухів</div></div>
+        <div class="rep-item"><div class="rep-item__val gold" id="livMax">0</div><div class="rep-item__lbl">Макс. см</div></div>
+        <div class="rep-item"><div class="rep-item__val red" id="livErr">0</div><div class="rep-item__lbl">Помилок</div></div>
+      </div>
+    </div>
 
-        // === Звуки ===
-        function playSound(type) {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            
-            const now = audioCtx.currentTime;
-            if (type === 'beep') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now);
-                gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-                osc.start(now); osc.stop(now + 0.2);
-            } else if (type === 'victory') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(400, now);
-                osc.frequency.setValueAtTime(600, now + 0.2);
-                osc.frequency.setValueAtTime(800, now + 0.4);
-                gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-                osc.start(now); osc.stop(now + 0.8);
-            }
-        }
+    <!-- Report -->
+    <div id="reportScreen">
+      <div class="report-title">🏁 Завершено</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Результати тренування</div>
+      <div class="report-grid">
+        <div class="report-card"><div class="report-card__val green" id="repCount">0</div><div class="report-card__lbl">Рухів</div></div>
+        <div class="report-card"><div class="report-card__val gold" id="repMax">0 см</div><div class="report-card__lbl">Макс. висота</div></div>
+        <div class="report-card"><div class="report-card__val red" id="repErr">0</div><div class="report-card__lbl">Помилок</div></div>
+        <div class="report-card"><div class="report-card__val" id="repScore">—</div><div class="report-card__lbl">Ефективність</div></div>
+      </div>
+      <div class="gesture-cue" id="gestureCue">🙌 Підніми обидві руки вгору, щоб зберегти результат</div>
+      <button id="restartBtn">Нове тренування</button>
+    </div>
+  </div>
 
-        function speakWait(text, callback) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'uk-UA'; utterance.rate = 1.05;
-            utterance.onend = () => { if(callback) callback(); };
-            window.speechSynthesis.speak(utterance);
-        }
+  <!-- BOTTOM -->
+  <div id="bottomPanel">
+    <div id="livePanel"></div>
+  </div>
+</div>
 
-        function speakLive(text) {
-            const now = Date.now();
-            if (now - lastSpokenTime > 2500) {
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(text); u.lang = 'uk-UA'; u.rate = 1.1;
-                window.speechSynthesis.speak(u); lastSpokenTime = now;
-            }
-        }
+<script>
+// ⚙️ Налаштування — вставте URL вашого Google Apps Script
+const GOOGLE_SHEETS_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE";
+const EXERCISE_DURATION = 30;
 
-        function setUI(icon, title, subtitle, isListening = false) {
-            document.getElementById('statusIcon').innerText = icon;
-            document.getElementById('aiSubtitle').innerText = title;
-            document.getElementById('aiSubtext').innerText = subtitle;
-            const iconEl = document.getElementById('statusIcon');
-            isListening ? iconEl.classList.add('listening') : iconEl.classList.remove('listening');
-        }
+// DOM
+const video = document.getElementById('webcam');
+const canvas = document.getElementById('output_canvas');
+const ctx = canvas.getContext('2d');
 
-        // === ВВІД ЗРОСТУ ===
-        function listenForHeight() {
-            setUI("🎤", "Слухаю...", "Скажіть зріст або введіть на екрані", true);
-            
-            const inputGroup = document.getElementById('heightInputGroup');
-            inputGroup.classList.remove('hidden');
-            setTimeout(() => inputGroup.classList.remove('opacity-0'), 50);
+// Стан
+let state = 'INIT';
+let userHeight = null;
+let kSamples = [];   // FIX: усереднення kFactor по кількох кадрах
+let kFactor = null;
+let audioCtx = null;
+let lastSpeak = 0;
+let timer = EXERCISE_DURATION;
+let timerInt = null;
+let hasSaved = false;
+let metrics = { reps: 0, maxKnee: 0, errors: 0, isUp: false, lastKnee: 0 };
+let recognizer = null;
 
-            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SR) {
-                // Браузер не підтримує голосове введення
-                document.getElementById('noVoiceMessage').classList.remove('hidden');
-                setUI("⌨️", "Голос недоступний", "Будь ласка, введіть зріст вручну", false);
-                return;
-            }
+// === УТИЛІТИ ===
+function setPhase(text, dotClass = '') {
+  document.getElementById('phaseText').innerText = text;
+  const dot = document.getElementById('phaseDot');
+  dot.className = 'phase-dot ' + dotClass;
+}
 
-            speechRecognizer = new SR();
-            speechRecognizer.lang = 'uk-UA';
-            speechRecognizer.continuous = false;
+function setDialog(icon, title, sub, listening = false) {
+  document.getElementById('dialogIcon').innerText = icon;
+  document.getElementById('dialogTitle').innerText = title;
+  document.getElementById('dialogSub').innerText = sub;
+  const el = document.getElementById('dialogIcon');
+  listening ? el.classList.add('listening') : el.classList.remove('listening');
+}
 
-            speechRecognizer.onresult = (event) => {
-                const numbers = event.results[0][0].transcript.match(/\d+/g); 
-                let height = numbers ? parseInt(numbers.join('')) : 0;
-                if (height > 100 && height < 230) acceptHeight(height);
-                else setUI("⌨️", "Не розпізнано", "Введіть цифру на екрані", false);
-            };
-            speechRecognizer.onerror = () => {
-                setUI("⌨️", "Помилка", "Спробуйте ввести зріст вручну", false);
-            };
-            speechRecognizer.start();
-        }
+function showToast(text, cls = '') {
+  const t = document.getElementById('toast');
+  const tt = document.getElementById('toastText');
+  tt.innerText = text;
+  tt.className = 'toast-text ' + cls;
+  t.className = '';
+  void t.offsetWidth;
+  t.className = 'visible';
+  setTimeout(() => t.className = '', 2000);
+}
 
-        function acceptHeight(val) {
-            if (speechRecognizer) { speechRecognizer.stop(); speechRecognizer = null; }
-            userHeightCm = val;
-            document.getElementById('uiHeight').innerText = `${val} см`;
-            document.getElementById('heightInputGroup').classList.add('hidden');
-            document.getElementById('noVoiceMessage').classList.add('hidden');
-            
-            // Оновлюємо цільову висоту
-            const targetH = Math.round(userHeightCm * 0.54);
-            document.getElementById('liveTarget').innerText = `> ${targetH} см`;
+function playSound(type) {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  const now = audioCtx.currentTime;
+  if (type === 'beep') {
+    osc.type = 'sine'; osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    osc.start(now); osc.stop(now + 0.25);
+  } else if (type === 'rep') {
+    osc.type = 'triangle'; osc.frequency.value = 660;
+    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.start(now); osc.stop(now + 0.15);
+  } else if (type === 'victory') {
+    [440, 554, 660, 880].forEach((f, i) => {
+      const o2 = audioCtx.createOscillator();
+      const g2 = audioCtx.createGain();
+      o2.connect(g2); g2.connect(audioCtx.destination);
+      o2.type = 'triangle'; o2.frequency.value = f;
+      const t2 = now + i * 0.18;
+      g2.gain.setValueAtTime(0.35, t2); g2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.3);
+      o2.start(t2); o2.stop(t2 + 0.3);
+    });
+  }
+}
 
-            appState = 'CALIBRATE';
-            document.getElementById('phaseIndicator').innerText = "Етап: Просторове сканування";
-            setUI("🚶", "Відійдіть від екрана", "Станьте в повний зріст боком до камери", false);
-            speakWait(`Прийнято. Ваш зріст ${userHeightCm} сантиметрів. Відійдіть від екрана, щоб я побачила вас повністю.`);
-            document.getElementById('miniMetrics').classList.remove('hidden');
-        }
+function speak(text, cb) {
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'uk-UA'; u.rate = 1.05;
+  u.onend = () => cb && cb();
+  window.speechSynthesis.speak(u);
+}
 
-        document.getElementById('confirmHeightBtn').onclick = () => {
-            const val = parseInt(document.getElementById('manualHeight').value);
-            if (val > 100 && val < 230) acceptHeight(val);
-            else {
-                document.getElementById('manualHeight').classList.add('border-red-500');
-                setTimeout(() => document.getElementById('manualHeight').classList.remove('border-red-500'), 1000);
-            }
-        };
+function speakLive(text) {
+  const now = Date.now();
+  if (now - lastSpeak > 2800) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'uk-UA'; u.rate = 1.1;
+    window.speechSynthesis.speak(u);
+    lastSpeak = now;
+  }
+}
 
-        // === ЛОГІКА ТРЕНУВАННЯ ===
-        function processToExplanation() {
-            appState = 'EXPLAIN';
-            document.getElementById('phaseIndicator').innerText = "Етап: Інструктаж";
-            setUI("🏃‍♀️", "Готово!", "Приготуйтесь до роботи", false);
-            speakWait("Простір відкалібровано. Вправа: Високе піднімання стегна. 30 секунд. Починай після сигналу.", () => {
-                setTimeout(startExercise, 1000);
-            });
-        }
+// === ВИСОТА ===
+function askHeight() {
+  state = 'ASK_HEIGHT';
+  setPhase('Введення зросту', 'gold');
+  setDialog('🎤', 'Який ваш зріст?', 'Скажіть або введіть на екрані', true);
+  document.getElementById('heightRow').classList.add('visible');
 
-        function startExercise() {
-            appState = 'EXERCISE';
-            document.getElementById('phaseIndicator').innerText = "Етап: Робота";
-            playSound('beep');
-            dialogBox.classList.add('hidden');
-            document.getElementById('liveStatsBox').classList.remove('hidden');
-            
-            exerciseTimer = 30;
-            document.getElementById('uiTimer').innerText = `00:${exerciseTimer}`;
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                exerciseTimer--;
-                document.getElementById('uiTimer').innerText = `00:${exerciseTimer < 10 ? '0'+exerciseTimer : exerciseTimer}`;
-                if (exerciseTimer <= 0) {
-                    clearInterval(timerInterval);
-                    timerInterval = null;
-                    finishExercise();
-                }
-            }, 1000);
-        }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('noVoiceMsg').style.display = 'block';
+    setDialog('⌨️', 'Введіть зріст', 'Голос недоступний у цьому браузері', false);
+    return;
+  }
+  recognizer = new SR();
+  recognizer.lang = 'uk-UA';
+  recognizer.continuous = false;
+  recognizer.onresult = e => {
+    const nums = e.results[0][0].transcript.match(/\d+/g);
+    const h = nums ? parseInt(nums.join('')) : 0;
+    if (h > 100 && h < 230) acceptHeight(h);
+    else setDialog('⌨️', 'Не розпізнано', 'Введіть цифру на екрані', false);
+  };
+  recognizer.onerror = () => setDialog('⌨️', 'Помилка голосу', 'Введіть зріст вручну', false);
+  recognizer.start();
+}
 
-        function finishExercise() {
-            appState = 'DONE';
-            hasSaved = false;
-            playSound('beep');
-            document.getElementById('liveStatsBox').classList.add('hidden');
-            document.getElementById('reportBox').classList.remove('hidden');
-            
-            document.getElementById('repCount').innerText = metrics.reps;
-            document.getElementById('repMaxHeight').innerText = metrics.maxKneeHeight + " см";
-            document.getElementById('gestureInstruction').innerHTML = 
-                '<p class="text-sm font-bold text-slate-200">🙌 Підніми дві руки вгору, щоб зберегти результат у базу!</p>';
-            
-            speakWait("Час вийшов! Підніми дві руки вгору, щоб зберегти результат у хмару.");
-        }
+function acceptHeight(val) {
+  if (recognizer) { try { recognizer.stop(); } catch(e){} recognizer = null; }
+  userHeight = val;
+  document.getElementById('uiHeight').innerText = val + ' см';
+  document.getElementById('pillHeight').classList.add('visible');
+  document.getElementById('heightRow').classList.remove('visible');
+  document.getElementById('noVoiceMsg').style.display = 'none';
 
-        function resetApp() {
-            // Скидаємо стан до початкового (без перезавантаження сторінки)
-            appState = 'INIT';
-            metrics = { reps: 0, maxKneeHeight: 0, errors: 0, isKneeUp: false };
-            exerciseTimer = 0;
-            hasSaved = false;
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = null;
-            
-            document.getElementById('startBtn').classList.remove('hidden');
-            dialogBox.classList.add('hidden');
-            document.getElementById('reportBox').classList.add('hidden');
-            document.getElementById('liveStatsBox').classList.add('hidden');
-            document.getElementById('miniMetrics').classList.add('hidden');
-            document.getElementById('victoryOverlay').classList.add('hidden');
-            document.getElementById('phaseIndicator').innerText = "Етап: Ініціалізація";
-            document.getElementById('uiTimer').innerText = "00:00";
-            document.getElementById('liveKnee').innerHTML = '0<span class="text-lg text-slate-400">см</span>';
-            document.getElementById('liveTarget').innerText = "> 90 см";
-        }
+  const target = Math.round(userHeight * 0.54);
+  document.getElementById('targetLabel').innerText = target;
 
-        document.getElementById('restartBtn').onclick = resetApp;
+  state = 'CALIBRATE';
+  setPhase('Калібрування', 'active');
+  setDialog('🧍', 'Відійдіть від екрана', 'Станьте в повний зріст, щоб я вас бачила', false);
+  speak(`Зріст ${val} сантиметрів. Відійдіть від екрана і станьте прямо.`);
+}
 
-        // === ВІДПРАВКА ДАНИХ ===
-        function saveToCloud() {
-            if (GOOGLE_SHEETS_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-                console.warn("Вставте URL вашого скрипта в код!");
-                // Показуємо попередження замість успіху
-                document.getElementById('gestureInstruction').innerHTML = 
-                    '<p class="text-sm font-bold text-amber-400">⚠️ URL не налаштовано. Дані не збережено.</p>';
-                return;
-            }
+document.getElementById('confirmHeightBtn').onclick = () => {
+  const v = parseInt(document.getElementById('manualHeight').value);
+  if (v > 100 && v < 230) acceptHeight(v);
+  else {
+    const inp = document.getElementById('manualHeight');
+    inp.classList.add('error');
+    setTimeout(() => inp.classList.remove('error'), 800);
+  }
+};
 
-            const payload = {
-                height: userHeightCm,
-                time: 30,
-                reps: metrics.reps,
-                maxKnee: metrics.maxKneeHeight,
-                errors: metrics.errors
-            };
+// === ТРЕНУВАННЯ ===
+function startExplanation() {
+  state = 'EXPLAIN';
+  setPhase('Інструктаж', 'gold');
+  setDialog('🏃', 'Готово!', 'Приготуйтесь: Високе піднімання стегна, 30 секунд', false);
+  speak('Простір відкалібровано. Вправа: Високе піднімання стегна. 30 секунд. Починаємо після сигналу.', () => {
+    setTimeout(startExercise, 800);
+  });
+}
 
-            fetch(GOOGLE_SHEETS_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).then(() => {
-                console.log("Дані успішно відправлені у фоні");
-            }).catch(err => console.error(err));
-        }
+function startExercise() {
+  state = 'EXERCISE';
+  setPhase('Робота', 'active');
+  playSound('beep');
 
-        // === АНАЛІЗ КАДРІВ ===
-        function onResults(results) {
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+  document.getElementById('dialogBox').classList.remove('visible');
+  document.getElementById('exerciseHud').classList.add('visible');
+  document.getElementById('timerRing').classList.add('visible');
 
-            if (results.poseLandmarks) {
-                const nose = results.poseLandmarks[0];
-                const hip = results.poseLandmarks[23]; 
-                const knee = results.poseLandmarks[25]; 
-                const heel = results.poseLandmarks[29];
-                const leftWrist = results.poseLandmarks[15];
-                const rightWrist = results.poseLandmarks[16];
+  timer = EXERCISE_DURATION;
+  document.getElementById('uiTimer').innerText = timer;
+  updateProgressBar();
 
-                [nose, hip, knee, heel, leftWrist, rightWrist].forEach(pt => {
-                    if(pt) {
-                        canvasCtx.beginPath(); canvasCtx.arc(pt.x * canvasElement.width, pt.y * canvasElement.height, 6, 0, 2 * Math.PI);
-                        canvasCtx.fillStyle = '#10b981'; canvasCtx.fill();
-                    }
-                });
+  if (timerInt) clearInterval(timerInt);
+  timerInt = setInterval(() => {
+    timer--;
+    document.getElementById('uiTimer').innerText = timer;
+    updateProgressBar();
+    // Попередження на останніх 5 сек
+    if (timer === 5) speakLive('П\'ять секунд!');
+    if (timer <= 0) {
+      clearInterval(timerInt); timerInt = null;
+      finishExercise();
+    }
+  }, 1000);
+}
 
-                if (appState === 'CALIBRATE' && nose && heel && nose.y > 0.05 && heel.y < 0.95) {
-                    const pixelHeight = Math.abs(heel.y - nose.y) * canvasElement.height;
-                    if (pixelHeight > 20) {
-                        kFactor = userHeightCm / pixelHeight;
-                        processToExplanation();
-                    }
-                }
+function updateProgressBar() {
+  const pct = (timer / EXERCISE_DURATION) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+  const ring = document.getElementById('ringFill');
+  const circumference = 220;
+  ring.style.strokeDashoffset = circumference * (1 - timer / EXERCISE_DURATION);
+  ring.style.stroke = timer <= 5 ? 'var(--red)' : 'var(--gold)';
+}
 
-                if (appState === 'EXERCISE' && kFactor && knee && heel) {
-                    const kneeHeightCm = Math.round(Math.abs(heel.y - knee.y) * canvasElement.height * kFactor);
-                    document.getElementById('liveKnee').innerHTML = `${kneeHeightCm}<span class="text-lg text-slate-400">см</span>`;
-                    if (kneeHeightCm > metrics.maxKneeHeight) metrics.maxKneeHeight = kneeHeightCm;
+function finishExercise() {
+  state = 'DONE';
+  hasSaved = false;
+  playSound('beep');
+  setPhase('Завершено', 'gold');
+  document.getElementById('exerciseHud').classList.remove('visible');
+  document.getElementById('timerRing').classList.remove('visible');
 
-                    const targetHeight = userHeightCm * 0.54; 
-                    if (kneeHeightCm > targetHeight - 15) { 
-                        if (!metrics.isKneeUp) {
-                            metrics.isKneeUp = true;
-                            metrics.reps++;
-                            if (kneeHeightCm < targetHeight) {
-                                metrics.errors++;
-                                speakLive("Вище стегно!");
-                            }
-                        }
-                    } else if (kneeHeightCm < 40) {
-                        metrics.isKneeUp = false;
-                    }
-                }
+  const eff = metrics.reps > 0 ? Math.round(((metrics.reps - metrics.errors) / metrics.reps) * 100) : 0;
+  document.getElementById('repCount').innerText = metrics.reps;
+  document.getElementById('repMax').innerText = metrics.maxKnee + ' см';
+  document.getElementById('repErr').innerText = metrics.errors;
+  document.getElementById('repScore').innerText = eff + '%';
+  document.getElementById('repScore').className = 'report-card__val ' + (eff >= 80 ? 'green' : eff >= 60 ? 'gold' : 'red');
 
-                // Жест перемоги
-                if (appState === 'DONE' && !hasSaved && leftWrist && rightWrist && nose) {
-                    if (leftWrist.y < nose.y && rightWrist.y < nose.y) {
-                        hasSaved = true;
-                        playSound('victory');
-                        
-                        const overlay = document.getElementById('victoryOverlay');
-                        overlay.classList.remove('hidden');
-                        overlay.classList.add('victory-flash');
-                        
-                        const instr = document.getElementById('gestureInstruction');
-                        if (GOOGLE_SHEETS_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
-                            instr.innerHTML = '<p class="text-sm font-bold text-amber-400">⚠️ URL відсутній. Результат не збережено.</p>';
-                        } else {
-                            instr.innerHTML = '<p class="text-sm font-bold text-white">✅ Дані збережено в Google Таблицю!</p>';
-                        }
-                        instr.className = "bg-green-600 p-4 rounded-xl border border-green-500";
-                        
-                        speakWait("Відмінна робота! Результат збережено. Відпочивай.");
-                        saveToCloud();
-                    }
-                }
-            }
-            canvasCtx.restore();
-        }
+  document.getElementById('reportScreen').classList.add('visible');
+  speak('Час вийшов! Підніми обидві руки вгору, щоб зберегти результат.');
+}
 
-        // === ІНІЦІАЛІЗАЦІЯ MEDIAPIPE ===
-        const pose = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
-        pose.setOptions({ 
-            modelComplexity: 1, 
-            smoothLandmarks: true, 
-            minDetectionConfidence: 0.6, 
-            minTrackingConfidence: 0.6 
-        });
-        pose.onResults(onResults);
+function resetApp() {
+  state = 'INIT';
+  metrics = { reps: 0, maxKnee: 0, errors: 0, isUp: false, lastKnee: 0 };
+  kSamples = []; kFactor = null;
+  timer = EXERCISE_DURATION; hasSaved = false;
+  if (timerInt) clearInterval(timerInt); timerInt = null;
 
-        const camera = new Camera(videoElement, { 
-            onFrame: async () => { await pose.send({image: videoElement}); }, 
-            width: 1280, 
-            height: 720,
-            facingMode: 'user'
-        });
+  document.getElementById('startScreen').style.display = 'block';
+  document.getElementById('dialogBox').classList.remove('visible');
+  document.getElementById('reportScreen').classList.remove('visible');
+  document.getElementById('exerciseHud').classList.remove('visible');
+  document.getElementById('timerRing').classList.remove('visible');
+  document.getElementById('pillHeight').classList.remove('visible');
+  document.getElementById('uiTimer').innerText = EXERCISE_DURATION;
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('ringFill').style.strokeDashoffset = 0;
+  setPhase('Ініціалізація');
+}
 
-        // Встановлюємо розміри canvas після старту камери
-        videoElement.addEventListener('loadedmetadata', () => {
-            canvasElement.width = videoElement.videoWidth;
-            canvasElement.height = videoElement.videoHeight;
-        });
+document.getElementById('restartBtn').onclick = resetApp;
 
-        document.getElementById('startBtn').onclick = () => {
-            document.getElementById('startBtn').classList.add('hidden');
-            dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
-            
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioCtx.resume();
-            setUI("⏳", "Запуск камери...", "Надайте дозвіл у браузері", false);
-            
-            camera.start().then(() => {
-                appState = 'ASK_HEIGHT';
-                setTimeout(() => {
-                    speakWait("Привіт! Який твій зріст у сантиметрах? Введіть на екрані або скажіть цифру після сигналу.", () => {
-                        playSound('beep'); 
-                        setTimeout(listenForHeight, 300);
-                    });
-                }, 1000);
-            }).catch((err) => {
-                console.error("Помилка камери: ", err);
-                setUI("❌", "Камера заблокована", "Відкрийте сайт через HTTPS", false);
-                speakLive("Не вдалося підключити камеру. Перевірте дозволи браузера.");
-                // Повертаємо кнопку, щоб спробувати знову
-                document.getElementById('startBtn').classList.remove('hidden');
-                dialogBox.classList.add('hidden');
-            });
-        };
-    </script>
+// === ЗБЕРЕЖЕННЯ ===
+function saveToCloud() {
+  if (GOOGLE_SHEETS_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
+    console.warn('Вставте URL вашого Apps Script!');
+    document.getElementById('gestureCue').innerHTML = '⚠️ URL не налаштовано. Результат не збережено.';
+    return;
+  }
+  const payload = {
+    height: userHeight, time: EXERCISE_DURATION,
+    reps: metrics.reps, maxKnee: metrics.maxKnee, errors: metrics.errors
+  };
+  fetch(GOOGLE_SHEETS_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).catch(e => console.error(e));
+}
+
+// === АНАЛІЗ POSE ===
+function onResults(results) {
+  // FIX: завжди синхронізуємо розмір canvas з реальними даними
+  if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    canvas.width = video.videoWidth || window.innerWidth;
+    canvas.height = video.videoHeight || window.innerHeight;
+  }
+
+  ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!results.poseLandmarks) { ctx.restore(); return; }
+
+  const lm = results.poseLandmarks;
+  const W = canvas.width, H = canvas.height;
+
+  // Точки для малювання
+  const pts = {
+    nose: lm[0],
+    lShoulder: lm[11], rShoulder: lm[12],
+    lHip: lm[23], rHip: lm[24],
+    lKnee: lm[25], rKnee: lm[26],
+    lAnkle: lm[27], rAnkle: lm[28],
+    lHeel: lm[29], rHeel: lm[30],
+    lWrist: lm[15], rWrist: lm[16]
+  };
+
+  // Малюємо скелет
+  const drawLine = (a, b, color = 'rgba(255,255,255,0.25)', w = 2) => {
+    if (!a || !b) return;
+    ctx.beginPath();
+    ctx.moveTo(a.x * W, a.y * H);
+    ctx.lineTo(b.x * W, b.y * H);
+    ctx.strokeStyle = color; ctx.lineWidth = w;
+    ctx.stroke();
+  };
+  const drawDot = (p, r = 6, color = '#C9A84C') => {
+    if (!p) return;
+    ctx.beginPath();
+    ctx.arc(p.x * W, p.y * H, r, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+  };
+
+  // Скелет
+  [
+    [pts.lShoulder, pts.rShoulder], [pts.lHip, pts.rHip],
+    [pts.lShoulder, pts.lHip], [pts.rShoulder, pts.rHip],
+    [pts.lHip, pts.lKnee], [pts.rHip, pts.rKnee],
+    [pts.lKnee, pts.lAnkle], [pts.rKnee, pts.rAnkle]
+  ].forEach(([a, b]) => drawLine(a, b));
+
+  // Ключові точки
+  [pts.lKnee, pts.rKnee, pts.lHip, pts.rHip].forEach(p => drawDot(p, 7, '#C9A84C'));
+  [pts.lAnkle, pts.rAnkle].forEach(p => drawDot(p, 5, 'rgba(255,255,255,0.5)'));
+  drawDot(pts.nose, 5, '#fff');
+
+  // FIX: калібрування на основі 10 кадрів (усереднення)
+  if (state === 'CALIBRATE' && pts.nose && pts.lHeel) {
+    const pixH = Math.abs(pts.lHeel.y - pts.nose.y) * H;
+    if (pixH > 40 && pts.nose.y > 0.05 && pts.lHeel.y < 0.97) {
+      kSamples.push(userHeight / pixH);
+      if (kSamples.length >= 8) {
+        // Беремо медіану для стабільності
+        kSamples.sort((a,b) => a - b);
+        kFactor = kSamples[Math.floor(kSamples.length / 2)];
+        kSamples = [];
+        startExplanation();
+      }
+    }
+  }
+
+  if (state === 'EXERCISE' && kFactor) {
+    // FIX: використовуємо ОБИДВА коліна — беремо найвище підняте
+    const calcKneeH = (heel, knee) => {
+      if (!heel || !knee) return 0;
+      return Math.round(Math.abs(heel.y - knee.y) * H * kFactor);
+    };
+    const leftKnee = calcKneeH(pts.lHeel, pts.lKnee);
+    const rightKnee = calcKneeH(pts.rHeel, pts.rKnee);
+    const kneeH = Math.max(leftKnee, rightKnee);
+
+    // FIX: згладжування значення (EMA)
+    metrics.lastKnee = metrics.lastKnee ? Math.round(metrics.lastKnee * 0.6 + kneeH * 0.4) : kneeH;
+    const smoothKnee = metrics.lastKnee;
+
+    // Оновлення UI
+    const num = document.getElementById('kneeNum');
+    num.innerText = smoothKnee;
+    const target = Math.round(userHeight * 0.54);
+    num.className = 'knee-number' + (smoothKnee >= target ? ' good' : smoothKnee >= target - 15 ? ' warn' : '');
+
+    if (smoothKnee > metrics.maxKnee) {
+      metrics.maxKnee = smoothKnee;
+      document.getElementById('livMax').innerText = smoothKnee;
+    }
+
+    // FIX: логіка підрахунку з гістерезисом
+    const upThreshold = target - 10;
+    const downThreshold = target - 30;
+
+    if (smoothKnee >= upThreshold && !metrics.isUp) {
+      metrics.isUp = true;
+      metrics.reps++;
+      playSound('rep');
+      document.getElementById('livReps').innerText = metrics.reps;
+      if (smoothKnee < target) {
+        metrics.errors++;
+        document.getElementById('livErr').innerText = metrics.errors;
+        speakLive('Вище стегно!');
+        showToast('Вище!', '');
+      } else {
+        showToast('Чудово!', 'good-fb');
+      }
+    } else if (smoothKnee < downThreshold && metrics.isUp) {
+      // FIX: скидання тільки після чіткого опускання
+      metrics.isUp = false;
+    }
+
+    // Візуальна підказка на коліні
+    const kneeToShow = leftKnee > rightKnee ? pts.lKnee : pts.rKnee;
+    if (kneeToShow) {
+      ctx.font = `bold ${Math.round(W * 0.025)}px Barlow Condensed, sans-serif`;
+      ctx.fillStyle = smoothKnee >= target ? '#00E5A0' : '#C9A84C';
+      ctx.textAlign = 'center';
+      ctx.fillText(smoothKnee + ' см', kneeToShow.x * W, kneeToShow.y * H - 16);
+    }
+  }
+
+  // Жест збереження
+  if (state === 'DONE' && !hasSaved && pts.lWrist && pts.rWrist && pts.nose) {
+    if (pts.lWrist.y < pts.nose.y - 0.05 && pts.rWrist.y < pts.nose.y - 0.05) {
+      hasSaved = true;
+      playSound('victory');
+      const ov = document.getElementById('victoryOverlay');
+      ov.className = 'flash-anim'; ov.style.display = 'block';
+      setTimeout(() => { ov.style.display = 'none'; ov.className = ''; }, 900);
+      const gc = document.getElementById('gestureCue');
+      gc.innerHTML = GOOGLE_SHEETS_URL !== "YOUR_GOOGLE_SCRIPT_URL_HERE"
+        ? '✅ Результат збережено в Google Таблицю!'
+        : '⚠️ URL не налаштовано — результат не збережено';
+      gc.className = 'gesture-cue saved';
+      speak('Чудово! Результат збережено. Відпочивай!');
+      saveToCloud();
+    }
+  }
+
+  ctx.restore();
+}
+
+// === MEDIAPIPE ===
+const pose = new Pose({
+  locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`
+});
+pose.setOptions({
+  modelComplexity: 1,
+  smoothLandmarks: true,
+  enableSegmentation: false,
+  minDetectionConfidence: 0.65,
+  minTrackingConfidence: 0.65
+});
+pose.onResults(onResults);
+
+const cam = new Camera(video, {
+  onFrame: async () => {
+    // FIX: встановлюємо розмір canvas до відправки кадру
+    if (video.videoWidth > 0 && (canvas.width !== video.videoWidth)) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+    await pose.send({image: video});
+  },
+  width: 1280, height: 720, facingMode: 'user'
+});
+
+// === СТАРТ ===
+document.getElementById('startBtn').onclick = () => {
+  document.getElementById('startScreen').style.display = 'none';
+  const db = document.getElementById('dialogBox');
+  db.classList.add('visible');
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  audioCtx.resume();
+  setDialog('⏳', 'Запуск камери...', 'Надайте дозвіл у браузері', false);
+  setPhase('Камера', 'active');
+
+  // Прогрес-лоадер
+  let lp = 0;
+  const lb = document.getElementById('loadingBar');
+  const li = setInterval(() => { lp = Math.min(lp + 3, 85); lb.style.width = lp + '%'; }, 100);
+
+  cam.start().then(() => {
+    clearInterval(li);
+    lb.style.width = '100%';
+    setTimeout(() => { lb.style.width = '0%'; lb.style.transition = 'none'; }, 500);
+    speak('Привіт! Який ваш зріст у сантиметрах? Введіть на екрані або скажіть цифру.', () => {
+      playSound('beep');
+      setTimeout(askHeight, 400);
+    });
+  }).catch(err => {
+    clearInterval(li); lb.style.width = '0%';
+    console.error('Камера:', err);
+    setDialog('❌', 'Камера заблокована', 'Відкрийте сайт через HTTPS або перевірте дозволи', false);
+    document.getElementById('startScreen').style.display = 'block';
+    db.classList.remove('visible');
+  });
+};
+</script>
 </body>
 </html>
