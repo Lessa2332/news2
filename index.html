@@ -26,23 +26,19 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
 
-  /* === CANVAS LAYER === */
   #webcam { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+  /* FIX: canvas mirror via CSS — coordinates corrected in JS */
   #output_canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); z-index: 0; }
 
-  /* === OVERLAY VIGNETTE === */
   .vignette {
     position: absolute; inset: 0; z-index: 1; pointer-events: none;
     background: radial-gradient(ellipse at center, transparent 40%, rgba(8,12,16,0.7) 100%);
   }
-
-  /* === SCANLINE TEXTURE === */
   .scanlines {
     position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.035;
     background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,1) 2px, rgba(255,255,255,1) 3px);
   }
 
-  /* === HUD LAYOUT === */
   #hud {
     position: absolute; inset: 0; z-index: 10;
     display: grid;
@@ -54,7 +50,6 @@
   }
   #hud > * { pointer-events: auto; }
 
-  /* === TOP BAR === */
   #topBar {
     display: flex;
     justify-content: space-between;
@@ -81,11 +76,7 @@
     margin-top: 3px;
   }
 
-  .top-metrics {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-  }
+  .top-metrics { display: flex; gap: 12px; align-items: flex-start; }
   .metric-pill {
     background: rgba(8,12,16,0.7);
     border: 1px solid var(--border);
@@ -95,109 +86,52 @@
     display: none;
   }
   .metric-pill.visible { display: block; }
-  .metric-pill__label {
-    font-family: var(--font-display);
-    font-size: 9px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .metric-pill__value {
-    font-family: var(--font-display);
-    font-size: 22px;
-    font-weight: 700;
-    line-height: 1.1;
-    color: var(--text);
-  }
+  .metric-pill__label { font-family: var(--font-display); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+  .metric-pill__value { font-family: var(--font-display); font-size: 22px; font-weight: 700; line-height: 1.1; color: var(--text); }
   .metric-pill__value.accent { color: var(--gold); }
 
-  /* === TIMER RING === */
   #timerRing {
-    position: relative;
-    width: 80px; height: 80px;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    position: relative; width: 80px; height: 80px;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
   }
   #timerRing.visible { display: flex; }
   #timerRing svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
   #timerRing .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 3; }
   #timerRing .ring-fill { fill: none; stroke: var(--gold); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 220; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
-  #timerRing .ring-text {
-    font-family: var(--font-display);
-    font-size: 26px; font-weight: 700;
-    color: var(--text);
-    line-height: 1;
-    position: relative; z-index: 1;
-  }
-  #timerRing .ring-label {
-    font-size: 9px; letter-spacing: 0.15em;
-    text-transform: uppercase; color: var(--muted);
-    position: relative; z-index: 1;
-  }
+  #timerRing .ring-text { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; position: relative; z-index: 1; }
+  #timerRing .ring-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); position: relative; z-index: 1; }
 
-  /* === CENTER PANEL === */
-  #centerPanel {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 20px;
-  }
+  #centerPanel { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 20px; }
 
-  /* === START SCREEN === */
   #startScreen { text-align: center; }
   #startBtn {
     font-family: var(--font-display);
     font-size: clamp(18px, 3vw, 26px);
-    font-weight: 900;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
+    font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase;
     color: #080C10;
     background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
-    border: none;
-    border-radius: 14px;
-    padding: 18px 48px;
-    cursor: pointer;
+    border: none; border-radius: 14px; padding: 18px 48px; cursor: pointer;
     transition: transform 0.15s, box-shadow 0.15s;
     box-shadow: 0 0 40px rgba(201,168,76,0.3), 0 4px 24px rgba(0,0,0,0.5);
   }
   #startBtn:hover { transform: scale(1.04); box-shadow: 0 0 60px rgba(201,168,76,0.5), 0 4px 24px rgba(0,0,0,0.5); }
   #startBtn:active { transform: scale(0.97); }
-  .start-tagline {
-    font-family: var(--font-display);
-    font-size: 12px;
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-top: 14px;
-  }
+  .start-tagline { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin-top: 14px; }
 
-  /* === DIALOG BOX === */
   #dialogBox {
     background: rgba(13,17,23,0.85);
     border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px 36px;
-    max-width: 480px;
-    width: 100%;
-    text-align: center;
-    display: none;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    border-radius: 20px; padding: 32px 36px; max-width: 480px; width: 100%;
+    text-align: center; display: none;
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 0 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
   }
   #dialogBox.visible { display: block; }
   .dialog-icon {
-    width: 64px; height: 64px;
-    margin: 0 auto 16px;
-    background: var(--surface2);
-    border-radius: 50%;
+    width: 64px; height: 64px; margin: 0 auto 16px;
+    background: var(--surface2); border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 28px;
-    border: 2px solid var(--border);
-    transition: border-color 0.3s;
+    font-size: 28px; border: 2px solid var(--border); transition: border-color 0.3s;
   }
   .dialog-icon.listening {
     border-color: var(--green);
@@ -209,30 +143,13 @@
     70% { box-shadow: 0 0 0 16px rgba(0,229,160,0); }
     100% { box-shadow: 0 0 0 0 rgba(0,229,160,0); }
   }
-  .dialog-title {
-    font-family: var(--font-display);
-    font-size: clamp(20px, 3vw, 28px);
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 8px;
-    line-height: 1.2;
-  }
-  .dialog-sub {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-  .height-input-row {
-    display: flex; gap: 10px; justify-content: center; margin-top: 20px;
-    display: none;
-  }
+  .dialog-title { font-family: var(--font-display); font-size: clamp(20px, 3vw, 28px); font-weight: 700; color: var(--text); margin-bottom: 8px; line-height: 1.2; }
+  .dialog-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .height-input-row { display: flex; gap: 10px; justify-content: center; margin-top: 20px; display: none; }
   .height-input-row.visible { display: flex; }
   #manualHeight {
-    background: var(--surface2);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: var(--text);
-    border-radius: 10px;
-    padding: 12px 16px;
+    background: var(--surface2); border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text); border-radius: 10px; padding: 12px 16px;
     width: 130px; text-align: center;
     font-family: var(--font-display); font-size: 20px; font-weight: 700;
     outline: none; transition: border-color 0.2s;
@@ -240,264 +157,83 @@
   #manualHeight:focus { border-color: var(--gold); }
   #manualHeight.error { border-color: var(--red); }
   #confirmHeightBtn {
-    background: var(--gold);
-    color: #080C10;
-    border: none;
-    border-radius: 10px;
-    padding: 12px 24px;
-    font-family: var(--font-display); font-size: 18px; font-weight: 900;
-    letter-spacing: 0.1em;
-    cursor: pointer; transition: transform 0.1s, background 0.2s;
+    background: var(--gold); color: #080C10; border: none; border-radius: 10px;
+    padding: 12px 24px; font-family: var(--font-display); font-size: 18px; font-weight: 900;
+    letter-spacing: 0.1em; cursor: pointer; transition: transform 0.1s, background 0.2s;
   }
   #confirmHeightBtn:hover { background: var(--gold-light); }
   #confirmHeightBtn:active { transform: scale(0.95); }
-  #noVoiceMsg {
-    font-size: 11px; color: #E8A83A; margin-top: 12px; display: none;
-  }
+  #noVoiceMsg { font-size: 11px; color: #E8A83A; margin-top: 12px; display: none; }
 
-  /* === LIVE EXERCISE HUD === */
   #exerciseHud { display: none; width: 100%; }
   #exerciseHud.visible { display: block; }
 
-  /* === KNEE HEIGHT METER === */
-  .knee-display {
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
+  .knee-display { display: flex; align-items: flex-end; justify-content: center; gap: 8px; margin-bottom: 8px; }
   .knee-number {
     font-family: var(--font-display);
-    font-size: clamp(64px, 14vw, 120px);
-    font-weight: 900;
-    line-height: 0.9;
-    color: var(--text);
-    transition: color 0.2s;
+    font-size: clamp(64px, 14vw, 120px); font-weight: 900; line-height: 0.9;
+    color: var(--text); transition: color 0.2s;
     text-shadow: 0 0 40px rgba(0,229,160,0.15);
   }
   .knee-number.good { color: var(--green); text-shadow: 0 0 40px rgba(0,229,160,0.3); }
   .knee-number.warn { color: var(--gold); text-shadow: 0 0 40px rgba(201,168,76,0.3); }
-  .knee-unit {
-    font-family: var(--font-display);
-    font-size: 24px; font-weight: 600; color: var(--muted);
-    padding-bottom: 12px;
-  }
-  .target-label {
-    text-align: center;
-    font-family: var(--font-display);
-    font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 16px;
-  }
+  .knee-unit { font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--muted); padding-bottom: 12px; }
+  .target-label { text-align: center; font-family: var(--font-display); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
   .target-label span { color: var(--gold); font-weight: 700; }
 
-  /* === PROGRESS BAR === */
-  .progress-bar-wrap {
-    height: 4px;
-    background: rgba(255,255,255,0.07);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 4px;
-  }
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--gold), var(--gold-light));
-    border-radius: 2px;
-    transition: width 1s linear;
-  }
+  .progress-bar-wrap { height: 4px; background: rgba(255,255,255,0.07); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 2px; transition: width 1s linear; }
 
-  /* === REP COUNTER === */
-  .rep-bar {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 12px;
-  }
+  .rep-bar { display: flex; justify-content: space-between; margin-top: 12px; }
   .rep-item { text-align: center; }
-  .rep-item__val {
-    font-family: var(--font-display);
-    font-size: 32px; font-weight: 900;
-    color: var(--text);
-  }
+  .rep-item__val { font-family: var(--font-display); font-size: 32px; font-weight: 900; color: var(--text); }
   .rep-item__val.accent { color: var(--green); }
-  .rep-item__lbl {
-    font-family: var(--font-display);
-    font-size: 9px; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--muted);
-  }
+  .rep-item__val.gold { color: var(--gold); }
+  .rep-item__val.red { color: var(--red); }
+  .rep-item__lbl { font-family: var(--font-display); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
 
-  /* === BOTTOM PANEL === */
-  #bottomPanel {
-    width: 100%;
-  }
-  #livePanel {
-    background: rgba(8,12,16,0.8);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 16px 20px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    display: none;
-  }
+  #bottomPanel { width: 100%; }
+  #livePanel { background: rgba(8,12,16,0.8); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); display: none; }
   #livePanel.visible { display: block; }
 
-  /* === PHASE BADGE === */
-  .phase-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 5px 12px;
-    font-family: var(--font-display);
-    font-size: 10px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-top: 10px;
-  }
-  .phase-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: var(--muted);
-  }
+  .phase-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 12px; font-family: var(--font-display); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+  .phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
   .phase-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
   .phase-dot.gold { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
 
-  /* === REPORT SCREEN === */
   #reportScreen {
-    background: rgba(13,17,23,0.92);
-    border: 1px solid rgba(201,168,76,0.3);
-    border-radius: 20px;
-    padding: 32px;
-    max-width: 420px;
-    width: 100%;
-    text-align: center;
-    display: none;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(13,17,23,0.92); border: 1px solid rgba(201,168,76,0.3); border-radius: 20px;
+    padding: 32px; max-width: 420px; width: 100%; text-align: center; display: none;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
   }
   #reportScreen.visible { display: block; }
-  .report-title {
-    font-family: var(--font-display);
-    font-size: 28px; font-weight: 900; letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 6px;
-  }
-  .report-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin: 20px 0;
-  }
-  .report-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px 10px;
-  }
-  .report-card__val {
-    font-family: var(--font-display);
-    font-size: 36px; font-weight: 900;
-    color: var(--text);
-  }
+  .report-title { font-family: var(--font-display); font-size: 28px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+  .report-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px; }
+  .report-card__val { font-family: var(--font-display); font-size: 36px; font-weight: 900; color: var(--text); }
   .report-card__val.gold { color: var(--gold); }
   .report-card__val.green { color: var(--green); }
   .report-card__val.red { color: var(--red); }
-  .report-card__lbl {
-    font-family: var(--font-display);
-    font-size: 9px; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--muted);
-    margin-top: 2px;
-  }
-  .gesture-cue {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 16px;
-    font-size: 13px;
-    color: var(--text);
-    animation: glow-pulse 2s infinite;
-  }
-  .gesture-cue.saved {
-    background: rgba(0,229,160,0.08);
-    border-color: rgba(0,229,160,0.4);
-    animation: none;
-  }
-  @keyframes glow-pulse {
-    0%, 100% { border-color: var(--border); }
-    50% { border-color: rgba(201,168,76,0.5); box-shadow: 0 0 20px rgba(201,168,76,0.1); }
-  }
-  #restartBtn {
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.15);
-    color: var(--muted);
-    border-radius: 10px;
-    padding: 12px 28px;
-    font-family: var(--font-display); font-size: 16px; font-weight: 700;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    cursor: pointer; transition: all 0.2s;
-  }
+  .report-card__lbl { font-family: var(--font-display); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .gesture-cue { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 16px; font-size: 13px; color: var(--text); animation: glow-pulse 2s infinite; }
+  .gesture-cue.saved { background: rgba(0,229,160,0.08); border-color: rgba(0,229,160,0.4); animation: none; }
+  @keyframes glow-pulse { 0%, 100% { border-color: var(--border); } 50% { border-color: rgba(201,168,76,0.5); box-shadow: 0 0 20px rgba(201,168,76,0.1); } }
+  #restartBtn { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: var(--muted); border-radius: 10px; padding: 12px 28px; font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
   #restartBtn:hover { border-color: var(--gold); color: var(--gold); }
 
-  /* === VICTORY FLASH === */
-  #victoryOverlay {
-    position: absolute; inset: 0; z-index: 20;
-    pointer-events: none; display: none;
-  }
+  #victoryOverlay { position: absolute; inset: 0; z-index: 20; pointer-events: none; display: none; }
   .flash-anim { animation: flash 0.8s ease-out forwards; }
-  @keyframes flash {
-    0% { background: rgba(0,229,160,0.35); }
-    100% { background: transparent; }
-  }
+  @keyframes flash { 0% { background: rgba(0,229,160,0.35); } 100% { background: transparent; } }
 
-  /* === FEEDBACK TOAST === */
-  #toast {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 15;
-    pointer-events: none;
-    display: none;
-  }
+  #toast { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 15; pointer-events: none; display: none; }
   #toast.visible { display: block; animation: toast-fade 2s ease-out forwards; }
-  @keyframes toast-fade {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-    15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    70% { opacity: 1; }
-    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
-  }
-  .toast-text {
-    font-family: var(--font-display);
-    font-size: clamp(32px, 6vw, 56px);
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--red);
-    text-shadow: 0 0 30px rgba(255,77,77,0.5);
-  }
+  @keyframes toast-fade { 0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); } 15% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(0.95); } }
+  .toast-text { font-family: var(--font-display); font-size: clamp(32px, 6vw, 56px); font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: var(--red); text-shadow: 0 0 30px rgba(255,77,77,0.5); }
   .toast-text.good-fb { color: var(--green); text-shadow: 0 0 30px rgba(0,229,160,0.5); }
 
-  /* === LOADING INDICATOR === */
-  #loadingBar {
-    position: absolute;
-    bottom: 0; left: 0;
-    height: 2px;
-    background: var(--gold);
-    width: 0%;
-    z-index: 30;
-    transition: width 0.5s ease;
-  }
+  #loadingBar { position: absolute; bottom: 0; left: 0; height: 2px; background: var(--gold); width: 0%; z-index: 30; transition: width 0.5s ease; }
 
-  /* Responsive */
-  @media (max-height: 600px) {
-    #hud { padding: 10px; }
-    .dialog-title { font-size: 18px; }
-    #dialogBox { padding: 20px 24px; }
-  }
+  @media (max-height: 600px) { #hud { padding: 10px; } .dialog-title { font-size: 18px; } #dialogBox { padding: 20px 24px; } }
 </style>
 </head>
 <body>
@@ -511,7 +247,6 @@
 <div id="loadingBar"></div>
 
 <div id="hud">
-  <!-- TOP BAR -->
   <div id="topBar">
     <div class="logo-block">
       <div class="logo-title">TrackMaster</div>
@@ -534,15 +269,12 @@
     </div>
   </div>
 
-  <!-- CENTER -->
   <div id="centerPanel">
-    <!-- Start -->
     <div id="startScreen">
       <button id="startBtn">АКТИВУВАТИ</button>
       <div class="start-tagline">AI Motion Analysis · Precision Tracking</div>
     </div>
 
-    <!-- Dialog -->
     <div id="dialogBox">
       <div class="dialog-icon" id="dialogIcon">🤖</div>
       <div class="dialog-title" id="dialogTitle">Підготовка...</div>
@@ -554,7 +286,6 @@
       <div id="noVoiceMsg">⚠️ Голос недоступний — введіть вручну</div>
     </div>
 
-    <!-- Live exercise -->
     <div id="exerciseHud">
       <div class="knee-display">
         <div class="knee-number" id="kneeNum">0</div>
@@ -571,7 +302,6 @@
       </div>
     </div>
 
-    <!-- Report -->
     <div id="reportScreen">
       <div class="report-title">🏁 Завершено</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">Результати тренування</div>
@@ -586,14 +316,13 @@
     </div>
   </div>
 
-  <!-- BOTTOM -->
   <div id="bottomPanel">
     <div id="livePanel"></div>
   </div>
 </div>
 
 <script>
-// ⚙️ Налаштування — вставте URL вашого Google Apps Script
+// ⚙️ Налаштування
 const GOOGLE_SHEETS_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE";
 const EXERCISE_DURATION = 30;
 
@@ -605,15 +334,22 @@ const ctx = canvas.getContext('2d');
 // Стан
 let state = 'INIT';
 let userHeight = null;
-let kSamples = [];   // FIX: усереднення kFactor по кількох кадрах
+let kSamples = [];
 let kFactor = null;
+// FIX: Один AudioContext на весь час — не перестворювати
 let audioCtx = null;
 let lastSpeak = 0;
 let timer = EXERCISE_DURATION;
 let timerInt = null;
 let hasSaved = false;
+// FIX: lastKnee включений у metrics — скидається разом із усім
 let metrics = { reps: 0, maxKnee: 0, errors: 0, isUp: false, lastKnee: 0 };
 let recognizer = null;
+
+// FIX: Хелпер для інвертованих X-координат (canvas дзеркалиться CSS, координати — ні)
+function px(point, W, H) {
+  return [(1 - point.x) * W, point.y * H];
+}
 
 // === УТИЛІТИ ===
 function setPhase(text, dotClass = '') {
@@ -641,13 +377,18 @@ function showToast(text, cls = '') {
   setTimeout(() => t.className = '', 2000);
 }
 
-function playSound(type) {
+function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioCtx.resume();
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  const now = audioCtx.currentTime;
+  return audioCtx;
+}
+
+function playSound(type) {
+  const ac = getAudioCtx();
+  ac.resume();
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.connect(gain); gain.connect(ac.destination);
+  const now = ac.currentTime;
   if (type === 'beep') {
     osc.type = 'sine'; osc.frequency.value = 880;
     gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
@@ -658,9 +399,9 @@ function playSound(type) {
     osc.start(now); osc.stop(now + 0.15);
   } else if (type === 'victory') {
     [440, 554, 660, 880].forEach((f, i) => {
-      const o2 = audioCtx.createOscillator();
-      const g2 = audioCtx.createGain();
-      o2.connect(g2); g2.connect(audioCtx.destination);
+      const o2 = ac.createOscillator();
+      const g2 = ac.createGain();
+      o2.connect(g2); g2.connect(ac.destination);
       o2.type = 'triangle'; o2.frequency.value = f;
       const t2 = now + i * 0.18;
       g2.gain.setValueAtTime(0.35, t2); g2.gain.exponentialRampToValueAtTime(0.001, t2 + 0.3);
@@ -669,18 +410,20 @@ function playSound(type) {
   }
 }
 
+// FIX: speak() не відміняє попереднє — оскільки cancel() знищує onend-callback
+// Замість цього перевіряємо чи synthesis зайнятий
 function speak(text, cb) {
-  window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'uk-UA'; u.rate = 1.05;
   u.onend = () => cb && cb();
+  // FIX: onerror як fallback — щоб callback не губився при помилці голосу
+  u.onerror = () => cb && cb();
   window.speechSynthesis.speak(u);
 }
 
 function speakLive(text) {
   const now = Date.now();
   if (now - lastSpeak > 2800) {
-    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'uk-UA'; u.rate = 1.1;
     window.speechSynthesis.speak(u);
@@ -767,14 +510,18 @@ function startExercise() {
   if (timerInt) clearInterval(timerInt);
   timerInt = setInterval(() => {
     timer--;
-    document.getElementById('uiTimer').innerText = timer;
-    updateProgressBar();
-    // Попередження на останніх 5 сек
-    if (timer === 5) speakLive('П\'ять секунд!');
+    // FIX: спочатку перевіряємо 0, потім оновлюємо UI — уникаємо -1 на екрані
     if (timer <= 0) {
+      timer = 0;
+      document.getElementById('uiTimer').innerText = timer;
+      updateProgressBar();
       clearInterval(timerInt); timerInt = null;
       finishExercise();
+      return;
     }
+    document.getElementById('uiTimer').innerText = timer;
+    updateProgressBar();
+    if (timer === 5) speakLive('П\'ять секунд!');
   }, 1000);
 }
 
@@ -790,12 +537,18 @@ function updateProgressBar() {
 function finishExercise() {
   state = 'DONE';
   hasSaved = false;
+  // FIX: скасовуємо живі підказки до фінального повідомлення
+  window.speechSynthesis.cancel();
   playSound('beep');
   setPhase('Завершено', 'gold');
   document.getElementById('exerciseHud').classList.remove('visible');
   document.getElementById('timerRing').classList.remove('visible');
 
-  const eff = metrics.reps > 0 ? Math.round(((metrics.reps - metrics.errors) / metrics.reps) * 100) : 0;
+  // FIX: clamp ефективності — не може бути від'ємною або > 100
+  const eff = metrics.reps > 0
+    ? Math.max(0, Math.min(100, Math.round(((metrics.reps - metrics.errors) / metrics.reps) * 100)))
+    : 0;
+
   document.getElementById('repCount').innerText = metrics.reps;
   document.getElementById('repMax').innerText = metrics.maxKnee + ' см';
   document.getElementById('repErr').innerText = metrics.errors;
@@ -807,7 +560,12 @@ function finishExercise() {
 }
 
 function resetApp() {
+  // FIX: зупиняємо recognizer якщо активний
+  if (recognizer) { try { recognizer.stop(); } catch(e){} recognizer = null; }
+  window.speechSynthesis.cancel();
+
   state = 'INIT';
+  // FIX: lastKnee скидається разом з усіма metrics
   metrics = { reps: 0, maxKnee: 0, errors: 0, isUp: false, lastKnee: 0 };
   kSamples = []; kFactor = null;
   timer = EXERCISE_DURATION; hasSaved = false;
@@ -827,7 +585,7 @@ function resetApp() {
 
 document.getElementById('restartBtn').onclick = resetApp;
 
-// === ЗБЕРЕЖЕННЯ ===
+// === ЗБЕРЕЖЕННЯ З TIMEOUT ===
 function saveToCloud() {
   if (GOOGLE_SHEETS_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
     console.warn('Вставте URL вашого Apps Script!');
@@ -838,16 +596,23 @@ function saveToCloud() {
     height: userHeight, time: EXERCISE_DURATION,
     reps: metrics.reps, maxKnee: metrics.maxKnee, errors: metrics.errors
   };
+  // FIX: AbortController для timeout 5 сек
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 5000);
   fetch(GOOGLE_SHEETS_URL, {
-    method: 'POST', mode: 'no-cors',
+    method: 'POST', mode: 'no-cors', signal: ctrl.signal,
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload)
-  }).catch(e => console.error(e));
+  })
+  .then(() => clearTimeout(tid))
+  .catch(e => {
+    clearTimeout(tid);
+    console.error('Збереження не вдалось:', e);
+  });
 }
 
 // === АНАЛІЗ POSE ===
 function onResults(results) {
-  // FIX: завжди синхронізуємо розмір canvas з реальними даними
   if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
     canvas.width = video.videoWidth || window.innerWidth;
     canvas.height = video.videoHeight || window.innerHeight;
@@ -861,7 +626,6 @@ function onResults(results) {
   const lm = results.poseLandmarks;
   const W = canvas.width, H = canvas.height;
 
-  // Точки для малювання
   const pts = {
     nose: lm[0],
     lShoulder: lm[11], rShoulder: lm[12],
@@ -872,23 +636,23 @@ function onResults(results) {
     lWrist: lm[15], rWrist: lm[16]
   };
 
-  // Малюємо скелет
+  // FIX: drawLine та drawDot використовують px() — інвертовані X координати
   const drawLine = (a, b, color = 'rgba(255,255,255,0.25)', w = 2) => {
     if (!a || !b) return;
+    const [ax, ay] = px(a, W, H);
+    const [bx, by] = px(b, W, H);
     ctx.beginPath();
-    ctx.moveTo(a.x * W, a.y * H);
-    ctx.lineTo(b.x * W, b.y * H);
-    ctx.strokeStyle = color; ctx.lineWidth = w;
-    ctx.stroke();
+    ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+    ctx.strokeStyle = color; ctx.lineWidth = w; ctx.stroke();
   };
   const drawDot = (p, r = 6, color = '#C9A84C') => {
     if (!p) return;
+    const [x, y] = px(p, W, H);
     ctx.beginPath();
-    ctx.arc(p.x * W, p.y * H, r, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fillStyle = color; ctx.fill();
   };
 
-  // Скелет
   [
     [pts.lShoulder, pts.rShoulder], [pts.lHip, pts.rHip],
     [pts.lShoulder, pts.lHip], [pts.rShoulder, pts.rHip],
@@ -896,28 +660,31 @@ function onResults(results) {
     [pts.lKnee, pts.lAnkle], [pts.rKnee, pts.rAnkle]
   ].forEach(([a, b]) => drawLine(a, b));
 
-  // Ключові точки
   [pts.lKnee, pts.rKnee, pts.lHip, pts.rHip].forEach(p => drawDot(p, 7, '#C9A84C'));
   [pts.lAnkle, pts.rAnkle].forEach(p => drawDot(p, 5, 'rgba(255,255,255,0.5)'));
   drawDot(pts.nose, 5, '#fff');
 
-  // FIX: калібрування на основі 10 кадрів (усереднення)
-  if (state === 'CALIBRATE' && pts.nose && pts.lHeel) {
-    const pixH = Math.abs(pts.lHeel.y - pts.nose.y) * H;
-    if (pixH > 40 && pts.nose.y > 0.05 && pts.lHeel.y < 0.97) {
-      kSamples.push(userHeight / pixH);
-      if (kSamples.length >= 8) {
-        // Беремо медіану для стабільності
-        kSamples.sort((a,b) => a - b);
-        kFactor = kSamples[Math.floor(kSamples.length / 2)];
-        kSamples = [];
-        startExplanation();
+  // FIX: Калібрування — беремо максимум обох п'ят для надійності
+  if (state === 'CALIBRATE' && pts.nose) {
+    const heelY = Math.max(
+      pts.lHeel ? pts.lHeel.y : 0,
+      pts.rHeel ? pts.rHeel.y : 0
+    );
+    if (heelY > 0) {
+      const pixH = Math.abs(heelY - pts.nose.y) * H;
+      if (pixH > 40 && pts.nose.y > 0.05 && heelY < 0.97) {
+        kSamples.push(userHeight / pixH);
+        if (kSamples.length >= 8) {
+          kSamples.sort((a, b) => a - b);
+          kFactor = kSamples[Math.floor(kSamples.length / 2)];
+          kSamples = [];
+          startExplanation();
+        }
       }
     }
   }
 
   if (state === 'EXERCISE' && kFactor) {
-    // FIX: використовуємо ОБИДВА коліна — беремо найвище підняте
     const calcKneeH = (heel, knee) => {
       if (!heel || !knee) return 0;
       return Math.round(Math.abs(heel.y - knee.y) * H * kFactor);
@@ -926,22 +693,23 @@ function onResults(results) {
     const rightKnee = calcKneeH(pts.rHeel, pts.rKnee);
     const kneeH = Math.max(leftKnee, rightKnee);
 
-    // FIX: згладжування значення (EMA)
-    metrics.lastKnee = metrics.lastKnee ? Math.round(metrics.lastKnee * 0.6 + kneeH * 0.4) : kneeH;
+    // EMA-згладжування
+    metrics.lastKnee = metrics.lastKnee
+      ? Math.round(metrics.lastKnee * 0.6 + kneeH * 0.4)
+      : kneeH;
     const smoothKnee = metrics.lastKnee;
 
-    // Оновлення UI
     const num = document.getElementById('kneeNum');
     num.innerText = smoothKnee;
     const target = Math.round(userHeight * 0.54);
     num.className = 'knee-number' + (smoothKnee >= target ? ' good' : smoothKnee >= target - 15 ? ' warn' : '');
 
-    if (smoothKnee > metrics.maxKnee) {
+    // FIX: maxKnee оновлюється лише для валідних рухів (вище target)
+    if (smoothKnee >= target && smoothKnee > metrics.maxKnee) {
       metrics.maxKnee = smoothKnee;
       document.getElementById('livMax').innerText = smoothKnee;
     }
 
-    // FIX: логіка підрахунку з гістерезисом
     const upThreshold = target - 10;
     const downThreshold = target - 30;
 
@@ -959,17 +727,17 @@ function onResults(results) {
         showToast('Чудово!', 'good-fb');
       }
     } else if (smoothKnee < downThreshold && metrics.isUp) {
-      // FIX: скидання тільки після чіткого опускання
       metrics.isUp = false;
     }
 
-    // Візуальна підказка на коліні
+    // FIX: підпис на коліні — з інвертованим X через px()
     const kneeToShow = leftKnee > rightKnee ? pts.lKnee : pts.rKnee;
     if (kneeToShow) {
+      const [kx, ky] = px(kneeToShow, W, H);
       ctx.font = `bold ${Math.round(W * 0.025)}px Barlow Condensed, sans-serif`;
       ctx.fillStyle = smoothKnee >= target ? '#00E5A0' : '#C9A84C';
       ctx.textAlign = 'center';
-      ctx.fillText(smoothKnee + ' см', kneeToShow.x * W, kneeToShow.y * H - 16);
+      ctx.fillText(smoothKnee + ' см', kx, ky - 16);
     }
   }
 
@@ -1009,12 +777,11 @@ pose.onResults(onResults);
 
 const cam = new Camera(video, {
   onFrame: async () => {
-    // FIX: встановлюємо розмір canvas до відправки кадру
     if (video.videoWidth > 0 && (canvas.width !== video.videoWidth)) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
     }
-    await pose.send({image: video});
+    await pose.send({ image: video });
   },
   width: 1280, height: 720, facingMode: 'user'
 });
@@ -1024,20 +791,20 @@ document.getElementById('startBtn').onclick = () => {
   document.getElementById('startScreen').style.display = 'none';
   const db = document.getElementById('dialogBox');
   db.classList.add('visible');
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  audioCtx.resume();
+  // FIX: AudioContext ініціалізується один раз
+  getAudioCtx().resume();
   setDialog('⏳', 'Запуск камери...', 'Надайте дозвіл у браузері', false);
   setPhase('Камера', 'active');
 
-  // Прогрес-лоадер
   let lp = 0;
   const lb = document.getElementById('loadingBar');
+  lb.style.transition = 'width 0.5s ease';
   const li = setInterval(() => { lp = Math.min(lp + 3, 85); lb.style.width = lp + '%'; }, 100);
 
   cam.start().then(() => {
     clearInterval(li);
     lb.style.width = '100%';
-    setTimeout(() => { lb.style.width = '0%'; lb.style.transition = 'none'; }, 500);
+    setTimeout(() => { lb.style.transition = 'none'; lb.style.width = '0%'; }, 500);
     speak('Привіт! Який ваш зріст у сантиметрах? Введіть на екрані або скажіть цифру.', () => {
       playSound('beep');
       setTimeout(askHeight, 400);
