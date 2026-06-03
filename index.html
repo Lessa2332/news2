@@ -63,6 +63,7 @@
                     <input type="number" id="manualHeight" placeholder="Або введіть: 168" class="bg-slate-950/80 border border-slate-600 text-white rounded-xl px-4 py-3 w-40 text-center text-sm focus:outline-none focus:border-emerald-500 shadow-inner">
                     <button id="confirmHeightBtn" class="bg-emerald-600 hover:bg-emerald-500 text-slate-50 px-6 py-3 rounded-xl font-bold active:scale-95 transition-all shadow-lg cursor-pointer">OK</button>
                 </div>
+                <div id="noVoiceMessage" class="text-xs text-amber-400 mt-4 hidden">⚠️ Ваш браузер не підтримує голосове введення. Використовуйте клавіатуру.</div>
             </div>
 
             <div id="reportBox" class="glass-panel max-w-md w-full p-6 md:p-8 rounded-3xl border border-emerald-500/50 text-center shadow-2xl hidden">
@@ -74,6 +75,7 @@
                 <div id="gestureInstruction" class="bg-slate-800/80 p-4 rounded-xl border border-slate-600 animate-pulse">
                     <p class="text-sm font-bold text-slate-200">🙌 Підніми дві руки вгору, щоб зберегти результат у базу!</p>
                 </div>
+                <button id="restartBtn" class="mt-6 bg-slate-700 hover:bg-slate-600 text-white py-3 px-8 rounded-xl font-bold transition-all cursor-pointer">Нове тренування</button>
             </div>
 
             <div id="liveStatsBox" class="w-full max-w-sm mt-auto glass-panel p-4 rounded-3xl border border-slate-600/50 hidden">
@@ -92,7 +94,7 @@
     </div>
 
     <script>
-        // ВСТАВТЕ ВАШ URL З GOOGLE APPS SCRIPT ТУДИ:
+        // ⚠️ Замініть на URL вашого Google Apps Script веб-додатку
         const GOOGLE_SHEETS_URL = "YOUR_GOOGLE_SCRIPT_URL_HERE";
 
         const videoElement = document.getElementById('webcam');
@@ -107,10 +109,12 @@
         let lastSpokenTime = 0;
         let exerciseTimer = 0;
         let speechRecognizer = null;
+        let timerInterval = null;
+        let hasSaved = false;
         
         let metrics = { reps: 0, maxKneeHeight: 0, errors: 0, isKneeUp: false };
 
-        // Звуки
+        // === Звуки ===
         function playSound(type) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = audioCtx.createOscillator();
@@ -154,10 +158,11 @@
             document.getElementById('statusIcon').innerText = icon;
             document.getElementById('aiSubtitle').innerText = title;
             document.getElementById('aiSubtext').innerText = subtitle;
-            isListening ? document.getElementById('statusIcon').classList.add('listening') : document.getElementById('statusIcon').classList.remove('listening');
+            const iconEl = document.getElementById('statusIcon');
+            isListening ? iconEl.classList.add('listening') : iconEl.classList.remove('listening');
         }
 
-        // --- ГІБРИДНИЙ ВВІД ЗРОСТУ ---
+        // === ВВІД ЗРОСТУ ===
         function listenForHeight() {
             setUI("🎤", "Слухаю...", "Скажіть зріст або введіть на екрані", true);
             
@@ -166,7 +171,12 @@
             setTimeout(() => inputGroup.classList.remove('opacity-0'), 50);
 
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SR) return;
+            if (!SR) {
+                // Браузер не підтримує голосове введення
+                document.getElementById('noVoiceMessage').classList.remove('hidden');
+                setUI("⌨️", "Голос недоступний", "Будь ласка, введіть зріст вручну", false);
+                return;
+            }
 
             speechRecognizer = new SR();
             speechRecognizer.lang = 'uk-UA';
@@ -178,6 +188,9 @@
                 if (height > 100 && height < 230) acceptHeight(height);
                 else setUI("⌨️", "Не розпізнано", "Введіть цифру на екрані", false);
             };
+            speechRecognizer.onerror = () => {
+                setUI("⌨️", "Помилка", "Спробуйте ввести зріст вручну", false);
+            };
             speechRecognizer.start();
         }
 
@@ -186,7 +199,12 @@
             userHeightCm = val;
             document.getElementById('uiHeight').innerText = `${val} см`;
             document.getElementById('heightInputGroup').classList.add('hidden');
+            document.getElementById('noVoiceMessage').classList.add('hidden');
             
+            // Оновлюємо цільову висоту
+            const targetH = Math.round(userHeightCm * 0.54);
+            document.getElementById('liveTarget').innerText = `> ${targetH} см`;
+
             appState = 'CALIBRATE';
             document.getElementById('phaseIndicator').innerText = "Етап: Просторове сканування";
             setUI("🚶", "Відійдіть від екрана", "Станьте в повний зріст боком до камери", false);
@@ -203,7 +221,7 @@
             }
         };
 
-        // --- ЛОГІКА ТРЕНУВАННЯ ---
+        // === ЛОГІКА ТРЕНУВАННЯ ===
         function processToExplanation() {
             appState = 'EXPLAIN';
             document.getElementById('phaseIndicator').innerText = "Етап: Інструктаж";
@@ -220,30 +238,65 @@
             dialogBox.classList.add('hidden');
             document.getElementById('liveStatsBox').classList.remove('hidden');
             
-            exerciseTimer = 30; // 30 секунд на вправу
-            const timerInterval = setInterval(() => {
+            exerciseTimer = 30;
+            document.getElementById('uiTimer').innerText = `00:${exerciseTimer}`;
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
                 exerciseTimer--;
                 document.getElementById('uiTimer').innerText = `00:${exerciseTimer < 10 ? '0'+exerciseTimer : exerciseTimer}`;
-                if (exerciseTimer <= 0) { clearInterval(timerInterval); finishExercise(); }
+                if (exerciseTimer <= 0) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                    finishExercise();
+                }
             }, 1000);
         }
 
         function finishExercise() {
             appState = 'DONE';
+            hasSaved = false;
             playSound('beep');
             document.getElementById('liveStatsBox').classList.add('hidden');
             document.getElementById('reportBox').classList.remove('hidden');
             
             document.getElementById('repCount').innerText = metrics.reps;
             document.getElementById('repMaxHeight').innerText = metrics.maxKneeHeight + " см";
+            document.getElementById('gestureInstruction').innerHTML = 
+                '<p class="text-sm font-bold text-slate-200">🙌 Підніми дві руки вгору, щоб зберегти результат у базу!</p>';
             
             speakWait("Час вийшов! Підніми дві руки вгору, щоб зберегти результат у хмару.");
         }
 
-        // --- ВІДПРАВКА ДАНИХ (WEBHOOK) ---
+        function resetApp() {
+            // Скидаємо стан до початкового (без перезавантаження сторінки)
+            appState = 'INIT';
+            metrics = { reps: 0, maxKneeHeight: 0, errors: 0, isKneeUp: false };
+            exerciseTimer = 0;
+            hasSaved = false;
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+            
+            document.getElementById('startBtn').classList.remove('hidden');
+            dialogBox.classList.add('hidden');
+            document.getElementById('reportBox').classList.add('hidden');
+            document.getElementById('liveStatsBox').classList.add('hidden');
+            document.getElementById('miniMetrics').classList.add('hidden');
+            document.getElementById('victoryOverlay').classList.add('hidden');
+            document.getElementById('phaseIndicator').innerText = "Етап: Ініціалізація";
+            document.getElementById('uiTimer').innerText = "00:00";
+            document.getElementById('liveKnee').innerHTML = '0<span class="text-lg text-slate-400">см</span>';
+            document.getElementById('liveTarget').innerText = "> 90 см";
+        }
+
+        document.getElementById('restartBtn').onclick = resetApp;
+
+        // === ВІДПРАВКА ДАНИХ ===
         function saveToCloud() {
             if (GOOGLE_SHEETS_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
                 console.warn("Вставте URL вашого скрипта в код!");
+                // Показуємо попередження замість успіху
+                document.getElementById('gestureInstruction').innerHTML = 
+                    '<p class="text-sm font-bold text-amber-400">⚠️ URL не налаштовано. Дані не збережено.</p>';
                 return;
             }
 
@@ -255,7 +308,6 @@
                 errors: metrics.errors
             };
 
-            // Використовуємо mode: 'no-cors' щоб уникнути блокування браузером
             fetch(GOOGLE_SHEETS_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -266,11 +318,12 @@
             }).catch(err => console.error(err));
         }
 
-        // --- АНАЛІЗ КАДРІВ ---
+        // === АНАЛІЗ КАДРІВ ===
         function onResults(results) {
-            canvasElement.width = videoElement.videoWidth || 640; canvasElement.height = videoElement.videoHeight || 480;
-            canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)'; canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
             if (results.poseLandmarks) {
                 const nose = results.poseLandmarks[0];
@@ -289,8 +342,10 @@
 
                 if (appState === 'CALIBRATE' && nose && heel && nose.y > 0.05 && heel.y < 0.95) {
                     const pixelHeight = Math.abs(heel.y - nose.y) * canvasElement.height;
-                    kFactor = userHeightCm / pixelHeight;
-                    processToExplanation();
+                    if (pixelHeight > 20) {
+                        kFactor = userHeightCm / pixelHeight;
+                        processToExplanation();
+                    }
                 }
 
                 if (appState === 'EXERCISE' && kFactor && knee && heel) {
@@ -301,91 +356,90 @@
                     const targetHeight = userHeightCm * 0.54; 
                     if (kneeHeightCm > targetHeight - 15) { 
                         if (!metrics.isKneeUp) {
-                            metrics.isKneeUp = true; metrics.reps++;
-                            if (kneeHeightCm < targetHeight) { metrics.errors++; speakLive("Вище стегно!"); }
+                            metrics.isKneeUp = true;
+                            metrics.reps++;
+                            if (kneeHeightCm < targetHeight) {
+                                metrics.errors++;
+                                speakLive("Вище стегно!");
+                            }
                         }
-                    } else if (kneeHeightCm < 40) { metrics.isKneeUp = false; }
+                    } else if (kneeHeightCm < 40) {
+                        metrics.isKneeUp = false;
+                    }
                 }
 
-                // РОЗПІЗНАВАННЯ ЖЕСТУ ПЕРЕМОГИ
-                if (appState === 'DONE' && leftWrist && rightWrist && nose) {
-                    // Якщо обидва зап'ястя вище носа (координата Y менша, бо 0 - це верх екрану)
+                // Жест перемоги
+                if (appState === 'DONE' && !hasSaved && leftWrist && rightWrist && nose) {
                     if (leftWrist.y < nose.y && rightWrist.y < nose.y) {
-                        appState = 'SAVED'; // Блокуємо повторні спрацювання
+                        hasSaved = true;
                         playSound('victory');
                         
-                        // Анімація успіху
                         const overlay = document.getElementById('victoryOverlay');
                         overlay.classList.remove('hidden');
                         overlay.classList.add('victory-flash');
                         
                         const instr = document.getElementById('gestureInstruction');
+                        if (GOOGLE_SHEETS_URL === "YOUR_GOOGLE_SCRIPT_URL_HERE") {
+                            instr.innerHTML = '<p class="text-sm font-bold text-amber-400">⚠️ URL відсутній. Результат не збережено.</p>';
+                        } else {
+                            instr.innerHTML = '<p class="text-sm font-bold text-white">✅ Дані збережено в Google Таблицю!</p>';
+                        }
                         instr.className = "bg-green-600 p-4 rounded-xl border border-green-500";
-                        instr.innerHTML = '<p class="text-sm font-bold text-white">✅ Дані збережено в Google Таблицю!</p>';
                         
                         speakWait("Відмінна робота! Результат збережено. Відпочивай.");
-                        saveToCloud(); // Відправка Webhook
+                        saveToCloud();
                     }
                 }
             }
             canvasCtx.restore();
         }
 
+        // === ІНІЦІАЛІЗАЦІЯ MEDIAPIPE ===
         const pose = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
-        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+        pose.setOptions({ 
+            modelComplexity: 1, 
+            smoothLandmarks: true, 
+            minDetectionConfidence: 0.6, 
+            minTrackingConfidence: 0.6 
+        });
         pose.onResults(onResults);
 
-                // 1. Додаємо facingMode: 'user' для фронтальної камери
-                // Блок ініціалізації з гарантованою перевіркою
         const camera = new Camera(videoElement, { 
-            onFrame: async () => { 
-                if (videoElement.readyState === 4) { // Перевірка, чи відео дійсно йде
-                    await pose.send({image: videoElement}); 
-                }
-            }, 
+            onFrame: async () => { await pose.send({image: videoElement}); }, 
             width: 1280, 
             height: 720,
-            facingMode: 'user' 
+            facingMode: 'user'
         });
 
-        startBtn.onclick = async () => {
-            startBtn.classList.add('hidden');
-            dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
-            
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioCtx.resume();
-            
-            setUI("⏳", "Запуск камери...", "Перевірте запит дозволу", false);
-            
-            try {
-                await camera.start();
-                appState = 'ASK_HEIGHT';
-                setTimeout(() => {
-                    speakWait("Привіт! Який твій зріст у сантиметрах? Скажи цифру або введи на екрані.", () => {
-                        playSound('beep'); 
-                        setTimeout(listenForHeight, 500);
-                    });
-                }, 1000);
-            } catch (err) {
-                console.error(err);
-                setUI("❌", "Помилка камери", "Натисніть на замок у адресному рядку і дозвольте камеру", false);
-            }
-        };
+        // Встановлюємо розміри canvas після старту камери
+        videoElement.addEventListener('loadedmetadata', () => {
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+        });
 
-document.getElementById('startBtn').classList.add('hidden');
+        document.getElementById('startBtn').onclick = () => {
+            document.getElementById('startBtn').classList.add('hidden');
             dialogBox.classList.remove('hidden', 'opacity-0', 'scale-95');
             
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             audioCtx.resume();
-            setUI("⏳", "Запуск камери...", "Надайте дозвіл", false);
+            setUI("⏳", "Запуск камери...", "Надайте дозвіл у браузері", false);
             
             camera.start().then(() => {
                 appState = 'ASK_HEIGHT';
                 setTimeout(() => {
                     speakWait("Привіт! Який твій зріст у сантиметрах? Введіть на екрані або скажіть цифру після сигналу.", () => {
-                        playSound('beep'); setTimeout(listenForHeight, 300);
+                        playSound('beep'); 
+                        setTimeout(listenForHeight, 300);
                     });
                 }, 1000);
+            }).catch((err) => {
+                console.error("Помилка камери: ", err);
+                setUI("❌", "Камера заблокована", "Відкрийте сайт через HTTPS", false);
+                speakLive("Не вдалося підключити камеру. Перевірте дозволи браузера.");
+                // Повертаємо кнопку, щоб спробувати знову
+                document.getElementById('startBtn').classList.remove('hidden');
+                dialogBox.classList.add('hidden');
             });
         };
     </script>
